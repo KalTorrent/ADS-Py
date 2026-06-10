@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}{{ sub.titulo }} — SubastaApp{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="eb-breadcrumb">
+  <a href="/">Inicio</a> › <a href="{{ url_for('catalogo') }}">Subastas</a> › <span>{{ sub.titulo[:50] }}{% if sub.titulo|length > 50 %}...{% endif %}</span>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;margin-top:10px;" class="detail-grid">
+
+  <!-- Left: Image + description -->
+  <div>
+    <!-- Image -->
+    <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:20px;margin-bottom:14px;min-height:300px;display:flex;align-items:center;justify-content:center;">
+      {% if sub.imagen_path %}
+      <img src="/uploads/{{ sub.imagen_path }}" style="max-width:100%;max-height:420px;object-fit:contain;">
+      {% else %}
+      <div style="font-size:6rem;color:#ddd;text-align:center;">🏷️<div style="font-size:13px;color:#aaa;margin-top:8px;">Sin imagen</div></div>
+      {% endif %}
+    </div>
+
+    <!-- Description -->
+    <div class="detail-box" style="margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--eb-border);">Descripción del artículo</div>
+      <p style="font-size:13px;line-height:1.6;color:var(--eb-text);margin:0;">{{ sub.descripcion }}</p>
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+        <div><span style="color:var(--eb-text2);">Condición:</span> <strong>{{ sub.condicion }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Categoría:</span> <strong>{{ sub.tipo_art }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Ubicación:</span> <strong>{{ sub.ubicacion or '—' }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Tipo de subasta:</span> <strong>{{ sub.tipo_sub }}</strong></div>
+      </div>
+    </div>
+
+    {% if vehiculo %}
+    <div class="detail-box" style="margin-bottom:14px;border-left:4px solid var(--eb-blue);">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;">🚗 Especificaciones del Vehículo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+        <div><span style="color:var(--eb-text2);">Marca:</span> <strong>{{ vehiculo.marca }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Modelo:</span> <strong>{{ vehiculo.modelo }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Año:</span> <strong>{{ vehiculo.anio }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Kilometraje:</span> <strong>{{ "{:,}".format(vehiculo.kilometraje) }} km</strong></div>
+        <div><span style="color:var(--eb-text2);">N° de serie:</span> <strong>{{ vehiculo.num_serie }}</strong></div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if inmueble %}
+    <div class="detail-box" style="margin-bottom:14px;border-left:4px solid var(--eb-green);">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;">🏠 Especificaciones del Inmueble</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+        <div><span style="color:var(--eb-text2);">Tipo:</span> <strong>{{ inmueble.tipo_propiedad }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Habitaciones:</span> <strong>{{ inmueble.num_habitaciones }}</strong></div>
+        <div><span style="color:var(--eb-text2);">Terreno:</span> <strong>{{ inmueble.superficie_terreno }} m²</strong></div>
+        <div><span style="color:var(--eb-text2);">Construido:</span> <strong>{{ inmueble.superficie_construida }} m²</strong></div>
+        <div style="grid-column:1/-1;"><span style="color:var(--eb-text2);">Ubicación:</span> <strong>{{ inmueble.ubicacion_detallada }}</strong></div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if historial %}
+    <div class="detail-box">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px;">📋 Historial de ofertas <span style="font-size:11px;color:var(--eb-text2);font-weight:400;">(visible solo para administradores)</span></div>
+      <table class="eb-table">
+        <thead><tr><th>#</th><th>Postor</th><th>Monto</th><th>Fecha</th></tr></thead>
+        <tbody>
+        {% for h in historial %}
+        <tr>
+          <td style="color:var(--eb-text2);">{{ loop.index }}</td>
+          <td>{{ h.nombre }}</td>
+          <td style="font-weight:700;">${{ "%.2f"|format(h.monto) }}</td>
+          <td style="color:var(--eb-text2);">{{ h.fecha_oferta[:16] }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: Bid box -->
+  <div>
+    <!-- Title + status -->
+    <div style="margin-bottom:12px;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+        <span class="badge-tipo badge-{{ sub.tipo_sub|lower }}">{{ sub.tipo_sub }}</span>
+        <span style="font-size:11px;background:{% if sub.estado_sub=='Activa' %}#f0f9e8;color:#2d5a00{% else %}#f3f3f3;color:#555{% endif %};padding:2px 8px;border-radius:2px;font-weight:600;">
+          {{ sub.estado_sub }}
+        </span>
+      </div>
+      <h1 style="font-size:18px;font-weight:700;line-height:1.3;margin:0 0 4px;">{{ sub.titulo }}</h1>
+      <div style="font-size:12px;color:var(--eb-text2);">ID de subasta: #{{ sub.id_subasta }}</div>
+    </div>
+
+    <!-- Bid price box -->
+    <div class="bid-box" style="margin-bottom:12px;">
+      <div class="bid-label">Precio actual</div>
+      <div class="bid-price">${{ "%.2f"|format(sub.precio_actual) }}</div>
+      <div style="font-size:12px;color:var(--eb-text2);margin-top:4px;">
+        {{ sub.total_ofertas }} oferta(s) · Incremento mínimo: ${{ "%.2f"|format(sub.incremento_min) }}
+      </div>
+      <div style="margin:10px 0;padding:8px;background:#fff9e6;border-radius:4px;font-size:12px;">
+        <strong style="color:var(--eb-red);">⏳ </strong>
+        <span class="countdown" data-end="{{ sub.fecha_fin }}">cargando...</span>
+      </div>
+
+      {% if session.user_id and session.user_tipo != 1 and sub.estado_sub == 'Activa' %}
+      <form method="POST" action="{{ url_for('realizar_oferta', id_sub=sub.id_subasta) }}">
+        {% if sub.tipo_sub == 'Holandesa' %}
+        <p style="font-size:12px;color:var(--eb-text2);margin-bottom:8px;">El precio decrece con el tiempo. Acepta el precio actual para ganar.</p>
+        <input type="hidden" name="monto" value="{{ sub.precio_actual }}">
+        <button type="submit" class="btn-eb-bid">Aceptar ${{ "%.2f"|format(sub.precio_actual) }}</button>
+        {% elif sub.tipo_sub == 'Sellada' %}
+        <p style="font-size:12px;color:var(--eb-text2);margin-bottom:8px;">Tu oferta es privada (RN-10). Se revelará al cierre de la subasta.</p>
+        <input type="number" name="monto" step="0.01"
+               min="{{ sub.precio_actual + sub.incremento_min }}"
+               class="eb-input" style="margin-bottom:8px;"
+               placeholder="Mínimo: ${{ '%.2f'|format(sub.precio_actual + sub.incremento_min) }}" required>
+        <button type="submit" class="btn-eb-bid">Enviar oferta privada</button>
+        {% else %}
+        <input type="number" name="monto" step="0.01"
+               min="{{ sub.precio_actual + sub.incremento_min }}"
+               class="eb-input" style="margin-bottom:8px;"
+               placeholder="Mínimo: ${{ '%.2f'|format(sub.precio_actual + sub.incremento_min) }}" required>
+        <button type="submit" class="btn-eb-bid"
+                onclick="return confirm('Tu oferta no puede cancelarse (RN-07). ¿Confirmar?')">Hacer oferta</button>
+        {% endif %}
+        <div style="font-size:11px;color:var(--eb-text2);margin-top:6px;text-align:center;">Las ofertas son irreversibles (RN-07)</div>
+      </form>
+      {% elif not session.user_id %}
+      <a href="{{ url_for('login') }}" class="btn-eb-primary" style="display:block;text-align:center;margin-top:8px;">Iniciar sesión para pujar</a>
+      <a href="{{ url_for('registro') }}" class="btn-eb-secondary" style="display:block;text-align:center;margin-top:8px;">Crear cuenta gratis</a>
+      {% elif sub.estado_sub != 'Activa' %}
+      <div style="text-align:center;color:var(--eb-text2);padding:10px 0;font-size:13px;">Esta subasta ya no está activa.</div>
+      {% endif %}
+    </div>
+
+    <!-- Seller box -->
+    <div class="seller-box" style="margin-bottom:12px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Sobre el vendedor</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:40px;height:40px;background:#eff3fe;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">👤</div>
+        <div>
+          <div style="font-weight:600;font-size:13px;">{{ sub.vendedor_nombre }}</div>
+          <div class="stars">
+            {% for i in range(5) %}{% if i < sub.reputacion|int %}★{% else %}☆{% endif %}{% endfor %}
+            <span style="color:var(--eb-text2);font-size:12px;"> {{ "%.1f"|format(sub.reputacion) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety box -->
+    <div style="background:#f3f3f3;border-radius:4px;padding:12px;font-size:12px;color:var(--eb-text2);">
+      <div style="font-weight:600;color:var(--eb-text);margin-bottom:6px;">🛡️ Compra protegida</div>
+      <div>✔ Vendedor verificado por la plataforma</div>
+      <div>✔ Pago con comprobante requerido</div>
+      <div>✔ Sistema de calificaciones mutuas</div>
+    </div>
+  </div>
+</div>
+
+<style>
+@media(max-width:700px){.detail-grid{grid-template-columns:1fr!important;}}
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+const cd=document.querySelector('.countdown');
+if(cd){
+  const end=new Date(cd.dataset.end+'Z');
+  function tick(){
+    const diff=end-new Date();
+    if(diff<=0){cd.textContent='Subasta cerrada';cd.style.color='#767676';return;}
+    const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),
+          m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    if(d>0) cd.textContent=`${d}d ${h}h ${m}m restantes`;
+    else if(h>0) cd.textContent=`${h}h ${m}m ${s}s restantes`;
+    else{cd.textContent=`${m}m ${s}s restantes`;cd.style.color='#e53238';}
+    setTimeout(tick,1000);
+  }tick();
+}
+</script>
+{% endblock %}

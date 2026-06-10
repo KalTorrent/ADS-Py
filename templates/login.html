@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Iniciar Sesión — SubastaApp{% endblock %}
+{% block content %}
+<div style="max-width:420px;margin:30px auto;">
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:32px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:26px;font-weight:900;letter-spacing:-1px;">
+        <span style="color:#e53238">s</span><span style="color:#0064d2">u</span><span style="color:#f5af02">b</span><span style="color:#86b817">a</span><span style="color:#e53238">s</span><span style="color:#0064d2">t</span><span style="color:#f5af02">a</span><span style="color:#86b817">A</span><span style="color:#e53238">p</span><span style="color:#0064d2">p</span>
+      </div>
+      <div style="font-size:18px;font-weight:700;margin-top:8px;">Iniciar sesión</div>
+    </div>
+    <form method="POST">
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Correo electrónico</label>
+        <input type="email" name="correo" class="eb-input" required placeholder="correo@ejemplo.mx">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label class="eb-form-label">Contraseña</label>
+        <input type="password" name="password" class="eb-input" required>
+      </div>
+      <button type="submit" class="btn-eb-primary" style="width:100%;padding:12px;">Continuar</button>
+    </form>
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--eb-text2);">
+      ¿No tienes cuenta? <a href="{{ url_for('registro') }}" style="color:var(--eb-blue);font-weight:600;">Regístrate gratis</a>
+    </div>
+    <hr style="margin:20px 0;border-color:var(--eb-border);">
+    <div style="font-size:11px;color:var(--eb-text2);text-align:center;">
+      <strong>Demo:</strong> admin@subasta.mx / Admin1234<br>
+      Comprador: ana@mail.mx / Ana12345
+    </div>
+  </div>
+</div>
+{% endblock %}

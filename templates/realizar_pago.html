@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Realizar Pago — SubastaApp{% endblock %}
+{% block content %}
+<div class="eb-breadcrumb"><a href="/">Inicio</a> › <a href="{{ url_for('mi_historial') }}">Mis subastas</a> › <span>Pago</span></div>
+<div style="max-width:520px;margin:20px auto;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:18px;">💳 Realizar Pago (CU-C06)</div>
+
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:20px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--eb-border);margin-bottom:12px;">
+      <div>
+        <div style="font-size:12px;color:var(--eb-text2);">Artículo ganado</div>
+        <div style="font-size:15px;font-weight:700;margin-top:2px;">{{ sub.titulo }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:var(--eb-text2);">Monto a pagar</div>
+        <div style="font-size:22px;font-weight:700;color:var(--eb-text);">${{ "%.2f"|format(sub.precio_actual) }}</div>
+      </div>
+    </div>
+    {% if pago %}
+    <div style="font-size:12px;color:var(--eb-text2);margin-bottom:4px;">
+      <strong>Límite de pago:</strong>
+      <span style="color:var(--eb-red);font-weight:600;">{{ pago.fecha_limite[:16] }}</span>
+    </div>
+    {% endif %}
+    <div style="background:#fff9e6;border:1px solid #f5af02;border-radius:4px;padding:10px;font-size:12px;color:#664d00;">
+      ⚠️ El plazo de pago varía según el tipo de artículo (RN-14/15/16). Si el plazo vence sin pago, la subasta se reasigna (RN-17/18).
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:20px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Adjuntar comprobante</div>
+    <form method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom:16px;">
+        <label class="eb-form-label">Comprobante de pago (JPG, PNG o PDF — máx. 5 MB)</label>
+        <input type="file" name="comprobante" class="eb-input" accept=".jpg,.jpeg,.png,.pdf" required
+               style="padding:6px;">
+        <div style="font-size:11px;color:var(--eb-text2);margin-top:4px;">ERR-04: Solo se aceptan los formatos indicados.</div>
+      </div>
+      <button type="submit" class="btn-eb-primary" style="width:100%;padding:12px;font-size:14px;">Enviar comprobante</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if usuario else "Nuevo" }} Usuario — Admin{% endblock %}
+{% block content %}
+<div class="eb-breadcrumb">
+  <a href="{{ url_for('admin_dashboard') }}">Panel Admin</a> › <span>{{ "Editar usuario" if usuario else "Nuevo usuario" }}</span>
+</div>
+<div style="max-width:520px;margin:16px auto;">
+  <div style="font-size:20px;font-weight:700;margin-bottom:18px;">
+    {{ "✏️ Editar Usuario #" ~ usuario.id_usuario if usuario else "➕ Crear Usuario" }}
+  </div>
+
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:24px;">
+    <form method="POST">
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Nombre completo</label>
+        <input type="text" name="nombre" class="eb-input" required
+               value="{{ usuario.nombre if usuario else '' }}" placeholder="Nombre y apellido">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Correo electrónico</label>
+        <input type="email" name="correo" class="eb-input" required
+               value="{{ usuario.correo if usuario else '' }}" placeholder="correo@ejemplo.mx">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Rol</label>
+        <select name="id_tipo" class="eb-select" required>
+          {% for t in tipos %}
+          <option value="{{ t.id }}" {% if usuario and usuario.id_tipo == t.id %}selected{% endif %}>{{ t.tipo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style="margin-bottom:20px;">
+        <label class="eb-form-label">
+          Contraseña{% if usuario %} <span style="font-weight:400;color:var(--eb-text2);">(dejar vacío para no cambiar)</span>{% endif %}
+        </label>
+        <input type="password" name="password" class="eb-input"
+               {% if not usuario %}required{% endif %}
+               minlength="8" placeholder="Mínimo 8 caracteres">
+        <div style="font-size:11px;color:var(--eb-text2);margin-top:4px;">La contraseña se almacena cifrada (bcrypt).</div>
+      </div>
+
+      {% if usuario %}
+      <div style="background:#eff3fe;border:1px solid #3665f3;border-radius:4px;padding:10px;font-size:12px;color:#1a3a8f;margin-bottom:16px;">
+        <strong>Estado actual:</strong>
+        {% if usuario.id_estado == 1 %}✅ Activa{% elif usuario.id_estado == 2 %}⚠️ Suspendida{% else %}❌ Cancelada{% endif %}
+        — Para cambiar el estado usa los botones del panel principal.
+      </div>
+      {% endif %}
+
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn-eb-primary" style="flex:1;padding:11px;">
+          {{ "💾 Guardar cambios" if usuario else "➕ Crear usuario" }}
+        </button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn-eb-secondary" style="padding:11px 18px;">Cancelar</a>
+      </div>
+    </form>
+
+    {% if usuario and usuario.id_usuario != session.user_id %}
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--eb-border);text-align:center;">
+      <div style="font-size:12px;color:var(--eb-text2);margin-bottom:8px;">⚠️ Zona de peligro — acción irreversible</div>
+      <form method="POST" action="{{ url_for('admin_eliminar_usuario', id_usr=usuario.id_usuario) }}"
+            onsubmit="return confirm('¿Eliminar permanentemente a {{ usuario.nombre }}? Esta acción NO se puede deshacer.')">
+        <button type="submit" style="background:none;border:1px solid var(--eb-red);color:var(--eb-red);border-radius:24px;padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer;">
+          🗑️ Eliminar usuario permanentemente
+        </button>
+      </form>
+      <div style="font-size:11px;color:var(--eb-text2);margin-top:5px;">Solo posible si el usuario no tiene actividad registrada.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

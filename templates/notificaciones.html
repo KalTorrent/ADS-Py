@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones — SubastaApp{% endblock %}
+{% block content %}
+<div class="eb-breadcrumb"><a href="/">Inicio</a> › <span>Notificaciones</span></div>
+<div style="font-size:20px;font-weight:700;margin:10px 0 18px;">🔔 Notificaciones (CU-C05)</div>
+
+{% if notifs %}
+<div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;overflow:hidden;">
+  {% for n in notifs %}
+  <div style="padding:12px 16px;border-bottom:1px solid var(--eb-border);display:flex;gap:12px;align-items:flex-start;
+    background:{% if not n.leida %}#eff3fe{% else %}#fff{% endif %};">
+    <div style="font-size:20px;flex-shrink:0;">
+      {% if n.tipo=='Exito' %}✅{% elif n.tipo=='Advertencia' %}⚠️{% elif n.tipo=='Error' %}❌{% else %}ℹ️{% endif %}
+    </div>
+    <div style="flex:1;">
+      <div style="font-size:13px;{% if not n.leida %}font-weight:600;{% endif %}color:var(--eb-text);">{{ n.mensaje }}</div>
+      <div style="font-size:11px;color:var(--eb-text2);margin-top:3px;">{{ n.fecha[:16] }}</div>
+    </div>
+    {% if not n.leida %}
+    <div style="width:8px;height:8px;border-radius:50%;background:var(--eb-blue);margin-top:5px;flex-shrink:0;"></div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:60px;text-align:center;color:var(--eb-text2);">
+  <div style="font-size:3rem;margin-bottom:8px;">🔔</div>
+  <div style="font-size:15px;font-weight:600;color:var(--eb-text);">Sin notificaciones</div>
+  <div>Todo está al día.</div>
+</div>
+{% endif %}
+{% endblock %}

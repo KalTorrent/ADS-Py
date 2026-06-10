@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta — SubastaApp{% endblock %}
+{% block content %}
+<div style="max-width:460px;margin:30px auto;">
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:32px;">
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px;">Crear cuenta</div>
+    <div style="font-size:13px;color:var(--eb-text2);margin-bottom:20px;">Únete a SubastaApp y empieza a pujar</div>
+    <form method="POST">
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Nombre completo</label>
+        <input type="text" name="nombre" class="eb-input" required placeholder="Tu nombre">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Correo electrónico</label>
+        <input type="email" name="correo" class="eb-input" required placeholder="correo@ejemplo.mx">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="eb-form-label">Contraseña</label>
+        <input type="password" name="password" class="eb-input" required minlength="8" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div style="margin-bottom:20px;display:flex;gap:8px;align-items:flex-start;">
+        <input type="checkbox" name="terminos" id="terms" required style="margin-top:2px;">
+        <label for="terms" style="font-size:12px;color:var(--eb-text2);line-height:1.4;">
+          Acepto los <a href="#" style="color:var(--eb-blue);">Términos y condiciones</a> de uso de la plataforma (RN-19)
+        </label>
+      </div>
+      <button type="submit" class="btn-eb-primary" style="width:100%;padding:12px;">Crear cuenta</button>
+    </form>
+    <div style="text-align:center;margin-top:16px;font-size:13px;color:var(--eb-text2);">
+      ¿Ya tienes cuenta? <a href="{{ url_for('login') }}" style="color:var(--eb-blue);font-weight:600;">Inicia sesión</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

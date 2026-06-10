@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Subastas — SubastaApp{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="eb-breadcrumb"><a href="/">Inicio</a> › <span>Catálogo</span></div>
+
+<!-- Filter bar -->
+<div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:12px 16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+  <form method="GET" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex:1;">
+    <input type="text" name="q" value="{{ busqueda }}" class="eb-input" style="width:260px;" placeholder="Buscar en resultados...">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <a href="{{ url_for('catalogo') }}" class="btn-eb-sm {{ 'btn-eb-primary' if not categoria_sel else 'btn-eb-secondary' }}" style="text-decoration:none;">Todas</a>
+      {% for cat in categorias %}
+      <a href="{{ url_for('catalogo') }}?categoria={{ cat.tipo }}&q={{ busqueda }}"
+         class="btn-eb-sm {{ 'btn-eb-primary' if cat.tipo==categoria_sel else 'btn-eb-secondary' }}"
+         style="text-decoration:none;">{{ cat.tipo }}</a>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-eb-primary btn-eb-sm">Buscar</button>
+  </form>
+  <div style="color:var(--eb-text2);font-size:12px;white-space:nowrap;">{{ subastas|length }} resultado(s)</div>
+</div>
+
+{% if subastas %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;">
+  {% for s in subastas %}
+  <a href="{{ url_for('detalle_subasta', id_sub=s.id_subasta) }}" style="text-decoration:none;color:inherit;">
+    <div class="listing-card">
+      <div class="img-wrap">
+        {% if s.imagen_path %}<img src="/uploads/{{ s.imagen_path }}" alt="{{ s.titulo }}">
+        {% else %}<div class="no-img">🏷️</div>{% endif %}
+      </div>
+      <div class="listing-body">
+        <span class="badge-tipo badge-{{ s.tipo_subasta|lower }}">{{ s.tipo_subasta }}</span>
+        <span style="font-size:11px;color:var(--eb-text2);margin-left:4px;">{{ s.tipo_art }}</span>
+        <div class="listing-title" style="margin-top:4px;">{{ s.titulo }}</div>
+        <div class="listing-price">${{ "%.2f"|format(s.precio_actual) }}</div>
+        <div class="listing-bids">Puja actual</div>
+        <div class="listing-time" data-end="{{ s.fecha_fin }}">⏳ cargando...</div>
+        <div class="listing-seller">📍 {{ s.ubicacion or '—' }} · <span style="color:var(--eb-yellow)">★</span> {{ "%.1f"|format(s.reputacion) }}</div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:60px;text-align:center;color:var(--eb-text2);">
+  <div style="font-size:3rem;">🔍</div>
+  <div style="font-size:15px;font-weight:600;margin:8px 0 4px;color:var(--eb-text);">Sin resultados</div>
+  <div>Intenta con otros términos o categorías.</div>
+  <a href="{{ url_for('catalogo') }}" class="btn-eb-secondary" style="margin-top:14px;display:inline-block;">Ver todas las subastas</a>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block extra_js %}
+<script>
+document.querySelectorAll('[data-end]').forEach(el=>{
+  const end=new Date(el.dataset.end+'Z');
+  function tick(){
+    const diff=end-new Date();
+    if(diff<=0){el.textContent='Cerrada';el.style.color='#767676';return;}
+    const d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),
+          m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+    if(d>0) el.textContent=`${d}d ${h}h restantes`;
+    else if(h>0) el.textContent=`${h}h ${m}m restantes`;
+    else{el.textContent=`${m}m ${s}s`;el.style.color='#e53238';}
+    setTimeout(tick,1000);
+  }tick();
+});
+</script>
+{% endblock %}

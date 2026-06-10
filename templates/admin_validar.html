@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Validar Artículo #{{ articulo.id_articulo }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+  <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary me-3">← Volver</a>
+  <h4 class="fw-bold mb-0" style="color:var(--primary)">🔍 Validar Artículo #{{ articulo.id_articulo }}</h4>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-8">
+    <div class="card p-4">
+      <h5 class="fw-bold">{{ articulo.titulo }}</h5>
+      <div class="row text-muted small mb-3">
+        <div class="col-auto"><span class="badge bg-secondary">{{ articulo.tipo_art }}</span></div>
+        <div class="col-auto">Condición: {{ articulo.condicion }}</div>
+        <div class="col-auto">📍 {{ articulo.ubicacion or 'N/A' }}</div>
+        <div class="col-auto">Vendedor: <strong>{{ articulo.vendedor_nombre }}</strong></div>
+      </div>
+      <p class="mb-3">{{ articulo.descripcion }}</p>
+
+      {% if vehiculo %}
+      <div class="alert alert-info">
+        <strong>🚗 Datos del Vehículo</strong><br>
+        Marca/Modelo: {{ vehiculo.marca }} {{ vehiculo.modelo }} ({{ vehiculo.anio }})<br>
+        Km: {{ vehiculo.kilometraje }} | Serie: {{ vehiculo.num_serie }}<br>
+        {% if vehiculo.doc_path %}Doc: <a href="#">{{ vehiculo.doc_path }}</a>{% else %}<span class="text-danger">⚠️ Sin documentación adjunta</span>{% endif %}
+      </div>
+      {% endif %}
+
+      {% if inmueble %}
+      <div class="alert alert-info">
+        <strong>🏠 Datos del Inmueble</strong><br>
+        Tipo: {{ inmueble.tipo_propiedad }} | Terreno: {{ inmueble.superficie_terreno }} m² | Construido: {{ inmueble.superficie_construida }} m²<br>
+        Habitaciones: {{ inmueble.num_habitaciones }} | Ubicación: {{ inmueble.ubicacion_detallada }}<br>
+        {% if inmueble.doc_path %}Doc: <a href="#">{{ inmueble.doc_path }}</a>{% else %}<span class="text-danger">⚠️ Sin documentación adjunta</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <!-- Plazo de validación -->
+    <div class="card p-3 mb-3">
+      <h6 class="fw-bold">⏱️ Control de Validación</h6>
+      {% if articulo.tipo_art == 'General' %}
+      <p class="text-danger fw-bold small mb-1">Límite: {{ articulo.fecha_limite[:16] if articulo.fecha_limite else 'N/A' }}</p>
+      <p class="text-muted small">Si no actúas antes del límite, el sistema aprobará automáticamente (RN-02)</p>
+      {% else %}
+      <p class="text-muted small">Revisión obligatoria. Sin aprobación automática (RN-03)</p>
+      {% endif %}
+      <!-- Extender plazo -->
+      {% if articulo.tipo_art == 'General' and articulo.id_validacion %}
+      <form method="POST">
+        <input type="hidden" name="accion" value="Extender">
+        <button type="submit" class="btn btn-sm btn-outline-warning w-100">⏳ Extender 30 min (CU-A05)</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Acciones de validación -->
+    <div class="card p-3">
+      <h6 class="fw-bold">⚖️ Decisión</h6>
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label small">Comentario (opcional para aprobar, obligatorio para rechazar)</label>
+          <textarea name="comentario" class="form-control form-control-sm" rows="3" placeholder="Observaciones al vendedor..."></textarea>
+        </div>
+        <button type="submit" name="accion" value="Aprobar" class="btn btn-success w-100 mb-2">✅ Aprobar (CU-A02/A03/A04)</button>
+        <button type="submit" name="accion" value="Rechazar" class="btn btn-danger w-100" onclick="return confirm('¿Seguro que deseas rechazar este artículo? El motivo es obligatorio.')">❌ Rechazar</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Panel Administrador{% endblock %}
+{% block content %}
+<h3 class="fw-bold mb-4" style="color:var(--primary)">🛡️ Panel de Administración</h3>
+
+<!-- Artículos pendientes -->
+<div class="card mb-4">
+  <div class="card-header fw-bold" style="background:var(--primary);color:#fff">
+    ⏳ Artículos Pendientes de Validación ({{ pendientes|length }})
+  </div>
+  <div class="card-body p-0">
+    {% if pendientes %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>ID</th><th>Título</th><th>Tipo</th><th>Registrado</th><th>Límite Validación</th><th>Acción</th>
+      </tr></thead>
+      <tbody>
+      {% for p in pendientes %}
+      <tr>
+        <td>{{ p.id_articulo }}</td>
+        <td>{{ p.titulo }}</td>
+        <td><span class="badge bg-secondary">{{ p.tipo_art }}</span></td>
+        <td class="small">{{ p.fecha_registro[:16] }}</td>
+        <td class="small {% if p.tipo_art == 'General' %}text-danger fw-bold{% endif %}">
+          {% if p.tipo_art == 'General' %}⚠️ {{ p.fecha_limite[:16] if p.fecha_limite else 'N/A' }}{% else %}Sin límite{% endif %}
+        </td>
+        <td><a href="{{ url_for('admin_validar', id_art=p.id_articulo) }}" class="btn btn-sm btn-primary">Revisar</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-3 mb-0">✅ No hay artículos pendientes</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Subastas activas -->
+<div class="card mb-4">
+  <div class="card-header fw-bold" style="background:#14304d;color:#fff">
+    🔨 Subastas ({{ subastas|length }})
+  </div>
+  <div class="card-body p-0">
+    {% if subastas %}
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>ID</th><th>Artículo</th><th>Precio Actual</th><th>Cierre</th><th>Estado</th><th>Acción</th>
+      </tr></thead>
+      <tbody>
+      {% for s in subastas %}
+      <tr>
+        <td>{{ s.id_subasta }}</td>
+        <td>{{ s.titulo }}</td>
+        <td>${{ "%.2f"|format(s.precio_actual) }}</td>
+        <td class="small">{{ s.fecha_fin[:16] }}</td>
+        <td>
+          <span class="badge {% if s.id_estado==1 %}bg-success{% elif s.id_estado==4 %}bg-danger{% else %}bg-secondary{% endif %}">
+            {{ s.estado }}
+          </span>
+        </td>
+        <td>
+          {% if s.id_estado == 1 %}
+          <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ s.id_subasta }}">Cancelar</button>
+          <div class="modal fade" id="cancelModal{{ s.id_subasta }}">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Cancelar Subasta #{{ s.id_subasta }}</h5></div>
+                <form method="POST" action="{{ url_for('admin_cancelar_subasta', id_sub=s.id_subasta) }}">
+                  <div class="modal-body">
+                    <label class="form-label">Motivo de cancelación (RN-05)</label>
+                    <textarea name="motivo" class="form-control" rows="3" required placeholder="Infracción de políticas o problema legal..."></textarea>
+                  </div>
+                  <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Cancelación</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted text-center py-3 mb-0">No hay subastas registradas</p>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Gestión de usuarios -->
+<div class="card">
+  <div class="card-header fw-bold d-flex justify-content-between align-items-center" style="background:#444;color:#fff">
+    <span>👥 Gestión de Usuarios ({{ usuarios|length }})</span>
+    <a href="{{ url_for('admin_nuevo_usuario') }}" class="btn btn-sm btn-light" style="font-size:.8rem">➕ Nuevo usuario</a>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead class="table-light"><tr>
+        <th>ID</th><th>Nombre</th><th>Correo</th><th>Tipo</th><th>Estado</th><th>Rep.</th><th>Acciones</th>
+      </tr></thead>
+      <tbody>
+      {% for u in usuarios %}
+      <tr>
+        <td>{{ u.id_usuario }}</td>
+        <td>{{ u.nombre }}</td>
+        <td class="small">{{ u.correo }}</td>
+        <td><span class="badge bg-info text-dark">{{ u.tipo }}</span></td>
+        <td>
+          <span class="badge {% if u.estado=='Activa' %}bg-success{% elif u.estado=='Suspendida' %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+            {{ u.estado }}
+          </span>
+        </td>
+        <td>{{ "%.1f"|format(u.reputacion) }} ⭐</td>
+        <td>
+          <div class="d-flex flex-wrap gap-1">
+            <a href="{{ url_for('admin_editar_usuario', id_usr=u.id_usuario) }}"
+               class="btn btn-xs btn-outline-primary" style="font-size:.75rem;padding:2px 8px">✏️ Editar</a>
+            {% if u.id_usuario != session.user_id %}
+            <form method="POST" action="{{ url_for('admin_gestionar_usuario', id_usr=u.id_usuario) }}" class="d-inline">
+              {% if u.estado == 'Activa' %}
+              <button name="accion" value="Suspender" class="btn btn-xs btn-warning" style="font-size:.75rem;padding:2px 8px">Suspender</button>
+              <button name="accion" value="Cancelar" class="btn btn-xs btn-danger" style="font-size:.75rem;padding:2px 8px">Cancelar</button>
+              {% elif u.estado == 'Suspendida' %}
+              <button name="accion" value="Reactivar" class="btn btn-xs btn-success" style="font-size:.75rem;padding:2px 8px">Reactivar</button>
+              <button name="accion" value="Cancelar" class="btn btn-xs btn-danger" style="font-size:.75rem;padding:2px 8px">Cancelar</button>
+              {% else %}
+              <button name="accion" value="Reactivar" class="btn btn-xs btn-outline-success" style="font-size:.75rem;padding:2px 8px">Reactivar</button>
+              {% endif %}
+            </form>
+            {% else %}<span class="text-muted small">Tú</span>{% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

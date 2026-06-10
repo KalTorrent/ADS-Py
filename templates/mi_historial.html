@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Mis Subastas — SubastaApp{% endblock %}
+{% block content %}
+
+<div class="eb-breadcrumb"><a href="/">Inicio</a> › <span>Mis subastas</span></div>
+<div style="font-size:20px;font-weight:700;margin:10px 0 18px;">Mis subastas (CU-C08)</div>
+
+<!-- Tabs -->
+<div style="border-bottom:2px solid var(--eb-border);margin-bottom:16px;display:flex;gap:0;">
+  <button onclick="showTab('ganadas')" id="tab-ganadas"
+    style="padding:10px 18px;border:none;background:none;font-size:13px;font-weight:700;border-bottom:3px solid var(--eb-blue);margin-bottom:-2px;cursor:pointer;color:var(--eb-blue);">
+    🏆 Ganadas ({{ ganadas|length }})
+  </button>
+  <button onclick="showTab('ofertas')" id="tab-ofertas"
+    style="padding:10px 18px;border:none;background:none;font-size:13px;font-weight:400;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;color:var(--eb-text2);">
+    💬 Mis ofertas ({{ ofertas|length }})
+  </button>
+  <button onclick="showTab('pagos')" id="tab-pagos"
+    style="padding:10px 18px;border:none;background:none;font-size:13px;font-weight:400;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;color:var(--eb-text2);">
+    💰 Pagos ({{ pagos|length }})
+  </button>
+</div>
+
+<!-- Ganadas -->
+<div id="panel-ganadas">
+{% if ganadas %}
+<table class="eb-table">
+  <thead><tr><th>Artículo</th><th>Precio</th><th>Cierre</th><th>Estado</th><th>Pago</th><th>Acción</th></tr></thead>
+  <tbody>
+  {% for g in ganadas %}
+  <tr>
+    <td style="font-weight:600;">{{ g.titulo }}</td>
+    <td style="font-weight:700;color:var(--eb-text);">${{ "%.2f"|format(g.precio_actual) }}</td>
+    <td style="color:var(--eb-text2);">{{ g.fecha_fin[:16] }}</td>
+    <td><span style="font-size:11px;padding:2px 8px;border-radius:2px;background:#f0f9e8;color:#2d5a00;font-weight:600;">{{ g.estado }}</span></td>
+    <td>
+      <span style="font-size:11px;padding:2px 8px;border-radius:2px;font-weight:600;
+        background:{% if g.estado_pago=='Verificado' %}#f0f9e8;color:#2d5a00
+        {% elif g.estado_pago=='EnVerificacion' %}#fff9e6;color:#664d00
+        {% elif g.estado_pago=='Vencido' %}#fff0f0;color:#c00
+        {% else %}#f3f3f3;color:#555{% endif %};">
+        {{ g.estado_pago or 'Sin pago' }}
+      </span>
+    </td>
+    <td>
+      {% if not g.id_estado_pago or g.id_estado_pago == 1 %}
+      <a href="{{ url_for('realizar_pago', id_sub=g.id_subasta) }}" class="btn-eb-primary btn-eb-sm" style="text-decoration:none;">Pagar</a>
+      {% elif g.id_estado_pago == 3 and not g.ya_califiqu %}
+      <form method="POST" action="{{ url_for('confirmar_recepcion', id_sub=g.id_subasta) }}" style="display:flex;gap:6px;align-items:center;">
+        <select name="puntuacion" class="eb-select" style="width:60px;padding:4px 6px;">
+          <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>
+        </select>
+        <button type="submit" class="btn-eb-primary btn-eb-sm">Confirmar recepción</button>
+      </form>
+      {% elif g.ya_califiqu %}
+      <span style="color:var(--eb-green);font-size:12px;font-weight:600;">✔ Completado</span>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:40px;color:var(--eb-text2);">
+  <div style="font-size:2.5rem;margin-bottom:8px;">🏆</div>
+  <div>Aún no has ganado ninguna subasta.</div>
+  <a href="{{ url_for('catalogo') }}" class="btn-eb-primary" style="margin-top:12px;display:inline-block;">Ver subastas activas</a>
+</div>
+{% endif %}
+</div>
+
+<!-- Ofertas -->
+<div id="panel-ofertas" style="display:none;">
+{% if ofertas %}
+<table class="eb-table">
+  <thead><tr><th>Artículo</th><th>Mi oferta</th><th>Puja actual</th><th>Estado</th><th>Fecha</th></tr></thead>
+  <tbody>
+  {% for o in ofertas %}
+  <tr>
+    <td><a href="{{ url_for('detalle_subasta', id_sub=o.id_subasta) }}" style="color:var(--eb-blue);">{{ o.titulo }}</a></td>
+    <td style="font-weight:700;">${{ "%.2f"|format(o.monto) }}</td>
+    <td style="{% if o.monto == o.precio_actual %}color:var(--eb-green);font-weight:700;{% endif %}">${{ "%.2f"|format(o.precio_actual) }}</td>
+    <td><span style="font-size:11px;padding:2px 8px;border-radius:2px;background:#f3f3f3;color:#555;">{{ o.estado }}</span></td>
+    <td style="color:var(--eb-text2);">{{ o.fecha_oferta[:16] }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:40px;color:var(--eb-text2);">
+  <div style="font-size:2.5rem;margin-bottom:8px;">💬</div>
+  <div>Aún no has realizado ofertas.</div>
+</div>
+{% endif %}
+</div>
+
+<!-- Pagos -->
+<div id="panel-pagos" style="display:none;">
+{% if pagos %}
+<table class="eb-table">
+  <thead><tr><th>Artículo</th><th>Monto</th><th>Estado</th><th>Límite de pago</th></tr></thead>
+  <tbody>
+  {% for p in pagos %}
+  <tr>
+    <td>{{ p.titulo }}</td>
+    <td style="font-weight:700;">${{ "%.2f"|format(p.monto) }}</td>
+    <td><span style="font-size:11px;padding:2px 8px;border-radius:2px;font-weight:600;
+      background:{% if p.estado_pago=='Verificado' %}#f0f9e8;color:#2d5a00
+      {% elif p.estado_pago=='Vencido' %}#fff0f0;color:#c00
+      {% else %}#fff9e6;color:#664d00{% endif %};">
+      {{ p.estado_pago }}</span></td>
+    <td style="color:var(--eb-text2);">{{ p.fecha_limite[:16] }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:40px;color:var(--eb-text2);">
+  <div style="font-size:2.5rem;margin-bottom:8px;">💰</div>
+  <div>Sin pagos registrados.</div>
+</div>
+{% endif %}
+</div>
+
+{% endblock %}
+{% block extra_js %}
+<script>
+function showTab(name){
+  ['ganadas','ofertas','pagos'].forEach(t=>{
+    document.getElementById('panel-'+t).style.display = t===name ? 'block':'none';
+    const btn=document.getElementById('tab-'+t);
+    btn.style.fontWeight = t===name ? '700':'400';
+    btn.style.borderBottomColor = t===name ? 'var(--eb-blue)':'transparent';
+    btn.style.color = t===name ? 'var(--eb-blue)':'var(--eb-text2)';
+  });
+}
+</script>
+{% endblock %}

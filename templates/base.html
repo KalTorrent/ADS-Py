@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}SubastaApp{% endblock %}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<style>
+/* ── eBay-style design system ── */
+:root{
+  --eb-blue:#3665f3;
+  --eb-blue-dark:#2b52cc;
+  --eb-red:#e53238;
+  --eb-green:#86b817;
+  --eb-yellow:#f5af02;
+  --eb-gray:#767676;
+  --eb-border:#e5e5e5;
+  --eb-bg:#f3f3f3;
+  --eb-text:#191919;
+  --eb-text2:#767676;
+  --eb-white:#fff;
+  --eb-radius:4px;
+}
+*{box-sizing:border-box;}
+body{background:var(--eb-bg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--eb-text);font-size:13px;margin:0;}
+
+/* ── Top bar ── */
+.eb-topbar{background:var(--eb-white);border-bottom:1px solid var(--eb-border);font-size:12px;color:var(--eb-text2);}
+.eb-topbar a{color:var(--eb-text2);text-decoration:none;}
+.eb-topbar a:hover{color:var(--eb-blue);text-decoration:underline;}
+
+/* ── Header ── */
+.eb-header{background:var(--eb-white);border-bottom:1px solid var(--eb-border);padding:10px 0 0;}
+.eb-logo{font-size:30px;font-weight:900;letter-spacing:-2px;text-decoration:none;line-height:1;}
+.eb-logo span:nth-child(1){color:#e53238;}
+.eb-logo span:nth-child(2){color:#0064d2;}
+.eb-logo span:nth-child(3){color:#f5af02;}
+.eb-logo span:nth-child(4){color:#86b817;}
+.eb-logo span:nth-child(5){color:#e53238;}
+.eb-logo span:nth-child(6){color:#0064d2;}
+.eb-logo span:nth-child(7){color:#f5af02;}
+.eb-logo span:nth-child(8){color:#86b817;}
+.eb-logo span:nth-child(9){color:#e53238;}
+
+/* Search bar */
+.eb-search{display:flex;align-items:stretch;border:3px solid var(--eb-text);border-radius:28px;overflow:hidden;height:42px;}
+.eb-search input{flex:1;border:none;outline:none;padding:0 16px;font-size:14px;background:var(--eb-white);}
+.eb-search select{border:none;border-left:1px solid var(--eb-border);outline:none;padding:0 8px;background:var(--eb-white);font-size:12px;color:var(--eb-text2);max-width:130px;}
+.eb-search button{background:var(--eb-blue);border:none;padding:0 20px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;border-radius:0 25px 25px 0;}
+.eb-search button:hover{background:var(--eb-blue-dark);}
+
+/* Header nav */
+.eb-header-nav{border-top:1px solid var(--eb-border);margin-top:8px;}
+.eb-header-nav a{display:inline-block;padding:8px 14px;font-size:13px;color:var(--eb-text);text-decoration:none;border-bottom:3px solid transparent;}
+.eb-header-nav a:hover,.eb-header-nav a.active{border-bottom-color:var(--eb-text);color:var(--eb-text);}
+.eb-header-nav a.special{color:var(--eb-red);font-weight:600;}
+
+/* ── Layout ── */
+.eb-container{max-width:1200px;margin:0 auto;padding:0 16px;}
+.eb-main{padding:16px 0 40px;}
+
+/* ── Alerts ── */
+.eb-alert{padding:10px 16px;margin:0 0 12px;border-radius:var(--eb-radius);font-size:13px;border:1px solid transparent;}
+.eb-alert-success{background:#f0f9e8;border-color:#86b817;color:#2d5a00;}
+.eb-alert-danger{background:#fff0f0;border-color:#e53238;color:#c00;}
+.eb-alert-warning{background:#fff9e6;border-color:#f5af02;color:#664d00;}
+.eb-alert-info{background:#eff3fe;border-color:#3665f3;color:#1a3a8f;}
+
+/* ── Cards / Listing tiles ── */
+.listing-card{background:var(--eb-white);border:1px solid var(--eb-border);border-radius:var(--eb-radius);overflow:hidden;transition:box-shadow .15s;}
+.listing-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.15);}
+.listing-card .img-wrap{height:180px;background:#f3f3f3;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.listing-card .img-wrap img{width:100%;height:100%;object-fit:cover;}
+.listing-card .img-wrap .no-img{font-size:3rem;color:#ccc;}
+.listing-body{padding:10px 12px 14px;}
+.listing-title{font-size:13px;font-weight:400;color:var(--eb-text);margin:0 0 4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.listing-price{font-size:18px;font-weight:700;color:var(--eb-text);margin:4px 0 2px;}
+.listing-bids{font-size:12px;color:var(--eb-text2);}
+.listing-time{font-size:12px;color:var(--eb-red);font-weight:600;}
+.listing-time.ending-soon{color:var(--eb-red);}
+.listing-seller{font-size:12px;color:var(--eb-text2);margin-top:6px;}
+
+/* Type badges */
+.badge-tipo{display:inline-block;font-size:11px;padding:1px 6px;border-radius:2px;font-weight:600;}
+.badge-inglesa{background:#eff3fe;color:#3665f3;}
+.badge-holandesa{background:#fff9e6;color:#b36b00;}
+.badge-sellada{background:#f3f3f3;color:#555;}
+
+/* ── Buttons ── */
+.btn-eb-primary{background:var(--eb-blue);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;text-align:center;}
+.btn-eb-primary:hover{background:var(--eb-blue-dark);color:#fff;}
+.btn-eb-secondary{background:var(--eb-white);color:var(--eb-blue);border:2px solid var(--eb-blue);border-radius:24px;padding:9px 20px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;text-align:center;}
+.btn-eb-secondary:hover{background:#eff3fe;color:var(--eb-blue);}
+.btn-eb-bid{background:var(--eb-green);color:#fff;border:none;border-radius:24px;padding:12px 24px;font-size:15px;font-weight:700;cursor:pointer;width:100%;text-align:center;}
+.btn-eb-bid:hover{background:#74a014;color:#fff;}
+.btn-eb-sm{border-radius:16px;padding:5px 14px;font-size:12px;font-weight:700;}
+
+/* ── Detail page ── */
+.detail-img{width:100%;border:1px solid var(--eb-border);border-radius:var(--eb-radius);aspect-ratio:1;object-fit:contain;background:#fff;display:flex;align-items:center;justify-content:center;font-size:6rem;color:#ddd;}
+.detail-box{background:var(--eb-white);border:1px solid var(--eb-border);border-radius:var(--eb-radius);padding:20px;}
+.bid-box{background:var(--eb-white);border:2px solid var(--eb-blue);border-radius:var(--eb-radius);padding:20px;}
+.bid-price{font-size:28px;font-weight:700;color:var(--eb-text);}
+.bid-label{font-size:12px;color:var(--eb-text2);}
+.seller-box{border:1px solid var(--eb-border);border-radius:var(--eb-radius);padding:14px;background:var(--eb-white);}
+.stars{color:var(--eb-yellow);}
+
+/* ── Breadcrumb ── */
+.eb-breadcrumb{font-size:12px;color:var(--eb-text2);padding:8px 0 4px;}
+.eb-breadcrumb a{color:var(--eb-text2);text-decoration:none;}
+.eb-breadcrumb a:hover{text-decoration:underline;color:var(--eb-blue);}
+.eb-breadcrumb span{color:var(--eb-text2);}
+
+/* ── Table styles ── */
+.eb-table{width:100%;border-collapse:collapse;font-size:13px;}
+.eb-table th{background:#f3f3f3;border-bottom:2px solid var(--eb-border);padding:8px 12px;text-align:left;font-weight:600;}
+.eb-table td{border-bottom:1px solid var(--eb-border);padding:8px 12px;vertical-align:middle;}
+.eb-table tr:hover td{background:#fafafa;}
+
+/* ── Forms ── */
+.eb-form-label{font-size:13px;font-weight:600;margin-bottom:4px;display:block;}
+.eb-input{border:1px solid var(--eb-border);border-radius:var(--eb-radius);padding:8px 10px;font-size:13px;width:100%;outline:none;}
+.eb-input:focus{border-color:var(--eb-blue);box-shadow:0 0 0 2px rgba(54,101,243,.15);}
+.eb-select{border:1px solid var(--eb-border);border-radius:var(--eb-radius);padding:8px 10px;font-size:13px;background:#fff;width:100%;}
+
+/* ── Footer ── */
+.eb-footer{background:#fff;border-top:1px solid var(--eb-border);padding:20px 0;margin-top:40px;font-size:12px;color:var(--eb-text2);text-align:center;}
+
+/* ── Misc ── */
+.text-eb-blue{color:var(--eb-blue)!important;}
+.text-eb-red{color:var(--eb-red)!important;}
+.text-eb-green{color:var(--eb-green)!important;}
+.text-eb-gray{color:var(--eb-text2)!important;}
+.notif-dot{display:inline-block;width:8px;height:8px;background:var(--eb-red);border-radius:50%;vertical-align:middle;margin-left:2px;}
+.section-title{font-size:18px;font-weight:700;color:var(--eb-text);margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid var(--eb-border);}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="eb-topbar">
+  <div class="eb-container">
+    <div class="d-flex justify-content-between align-items-center" style="padding:5px 0;">
+      <div>
+        {% if session.user_id %}
+          Hola, <strong>{{ session.user_nombre }}</strong>
+          &nbsp;|&nbsp;<a href="{{ url_for('logout') }}">Cerrar sesión</a>
+        {% else %}
+          <a href="{{ url_for('login') }}">Iniciar sesión</a>
+          &nbsp;o&nbsp;
+          <a href="{{ url_for('registro') }}"><strong>Regístrate</strong></a>
+        {% endif %}
+      </div>
+      <div>
+        {% if session.user_id %}
+        <a href="{{ url_for('notificaciones') }}" id="notif-link">
+          🔔 Notificaciones<span id="notif-dot" class="d-none notif-dot"></span>
+        </a>
+        &nbsp;|&nbsp;
+        <a href="{{ url_for('mi_historial') }}">Mis subastas</a>
+        {% endif %}
+        {% if session.user_tipo == 1 %}
+        &nbsp;|&nbsp;<a href="{{ url_for('admin_dashboard') }}" style="color:var(--eb-red)"><strong>Panel Admin</strong></a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<header class="eb-header">
+  <div class="eb-container">
+    <div class="d-flex align-items-center gap-3" style="padding-bottom:10px;">
+      <!-- Logo -->
+      <a href="/" class="eb-logo" style="margin-right:8px;">
+        <span>s</span><span>u</span><span>b</span><span>a</span><span>s</span><span>t</span><span>a</span><span>A</span><span>p</span><span>p</span>
+      </a>
+      <!-- Search -->
+      <form class="eb-search flex-fill" action="{{ url_for('catalogo') }}" method="GET" style="max-width:660px;">
+        <input type="text" name="q" placeholder="Busca artículos, subastas...">
+        <select name="categoria">
+          <option value="">Todas las categorías</option>
+          <option value="General">General</option>
+          <option value="Vehiculo">Vehículo</option>
+          <option value="Inmueble">Inmueble</option>
+          <option value="Digital">Digital</option>
+          <option value="Entrada">Entrada</option>
+        </select>
+        <button type="submit">Buscar</button>
+      </form>
+      {% if session.user_id and session.user_tipo != 1 %}
+      <a href="{{ url_for('publicar_articulo') }}" class="btn-eb-secondary btn-eb-sm ms-2" style="white-space:nowrap;">
+        + Publicar
+      </a>
+      {% endif %}
+    </div>
+    <!-- Nav tabs -->
+    <nav class="eb-header-nav">
+      <a href="/" {% if request.endpoint=='index' %}class="active"{% endif %}>Inicio</a>
+      <a href="{{ url_for('catalogo') }}" {% if request.endpoint=='catalogo' %}class="active"{% endif %}>Subastas activas</a>
+      {% if session.user_id %}
+      <a href="{{ url_for('mi_historial') }}" {% if request.endpoint=='mi_historial' %}class="active"{% endif %}>Mis compras</a>
+      {% endif %}
+      {% if session.user_tipo != 1 %}
+      <a href="{{ url_for('catalogo') }}?categoria=Vehiculo">Vehículos</a>
+      <a href="{{ url_for('catalogo') }}?categoria=Inmueble">Inmuebles</a>
+      <a href="{{ url_for('catalogo') }}?categoria=Digital">Digital</a>
+      {% endif %}
+      {% if session.user_tipo == 1 %}
+      <a href="{{ url_for('admin_dashboard') }}" class="special" {% if request.endpoint=='admin_dashboard' %}style="border-bottom-color:var(--eb-red)"{% endif %}>
+        🛡️ Panel Admin
+      </a>
+      {% endif %}
+    </nav>
+  </div>
+</header>
+
+<!-- Alerts -->
+<div class="eb-container" style="padding-top:8px;">
+  {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in msgs %}
+    <div class="eb-alert eb-alert-{{ 'success' if cat=='success' else 'warning' if cat=='warning' else 'danger' if cat=='danger' else 'info' }}">
+      {{ msg }}
+      <span style="float:right;cursor:pointer;font-weight:700;opacity:.6;" onclick="this.parentElement.remove()">✕</span>
+    </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+<!-- Main content -->
+<main class="eb-main">
+  <div class="eb-container">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="eb-footer">
+  <div class="eb-container">
+    <div style="margin-bottom:6px;">
+      <a href="#" style="color:var(--eb-text2);margin:0 8px;text-decoration:none;">Privacidad</a>
+      <a href="#" style="color:var(--eb-text2);margin:0 8px;text-decoration:none;">Políticas</a>
+      <a href="#" style="color:var(--eb-text2);margin:0 8px;text-decoration:none;">Seguridad</a>
+      <a href="#" style="color:var(--eb-text2);margin:0 8px;text-decoration:none;">Centro de ayuda</a>
+    </div>
+    SubastaApp &copy; 2024 — Sistema de Gestión de Subastas | ESCOM-IPN
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+{% if session.user_id %}
+function checkNotifs(){
+  fetch('/api/notificaciones_count').then(r=>r.json()).then(d=>{
+    const dot=document.getElementById('notif-dot');
+    if(dot) dot.classList.toggle('d-none', d.count===0);
+  });
+}
+checkNotifs();
+setInterval(checkNotifs, 30000);
+{% endif %}
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
