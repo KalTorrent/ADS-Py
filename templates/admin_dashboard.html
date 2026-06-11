@@ -129,6 +129,12 @@
               {% else %}
               <button name="accion" value="Reactivar" class="btn btn-xs btn-outline-success" style="font-size:.75rem;padding:2px 8px">Reactivar</button>
               {% endif %}
+              {% if u.tipo != 'Administrador' %}
+              <button name="accion" value="CancelarFraude" class="btn btn-xs btn-dark" style="font-size:.75rem;padding:2px 8px"
+                      onclick="return confirm('¿Seguro? Esta acción suspende la cuenta, cancela todas sus subastas y agrega el correo a la lista negra (RN-26).');">
+                🚫 Cancelar por fraude
+              </button>
+              {% endif %}
             </form>
             {% else %}<span class="text-muted small">Tú</span>{% endif %}
           </div>
