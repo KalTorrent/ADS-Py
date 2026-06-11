@@ -238,3 +238,41 @@ Al confirmar recepción, el comprador debe **adjuntar evidencia fotográfica** (
 3. `confirmar_recepcion()` GET+POST con validación y guardado.
 4. `mi_historial()` pasa las imágenes al template; enlace a la página de confirmación.
 5. Templates `confirmar_recepcion.html` (nuevo) y `mi_historial.html` (enlace + miniaturas).
+
+---
+
+# Decisiones de implementación — Arreglo 6: Pagos a plazos >$10,000 (CU-C06/C07, RN-27)
+
+## Regla RN-27
+**Fuente:** restricciones.txt, aud1.txt
+Si el monto a pagar **> $10,000 MXN** y el artículo **NO es inmueble** (id_tipo ≠ 3),
+el comprador puede pagar a **3, 6 o 12 meses** (sin intereses) o en un solo pago.
+Inmuebles y montos ≤ $10,000 → solo pago completo.
+
+## Diseño
+- `realizar_pago()` GET: calcula `aplica_plazos = monto > 10000 and tipo_art != 3` y ofrece opciones.
+- POST: si el comprador elige 3/6/12 (y aplica), crea N filas en `plan_pago`:
+  - `monto_cuota = round(monto/N, 2)`; la última cuota se ajusta para que la suma sea exacta.
+  - `fecha_vencimiento` = hoy + n meses (cuota n).
+  - Estado inicial de cada cuota: Pendiente (cat_estado_pago=1).
+- La validación de elegibilidad también se aplica en el servidor (AC-26/27): si el plan pedido
+  no aplica, se ignora y se trata como pago completo.
+- `mi_historial()` muestra, por pago a plazos, cuántas cuotas van pagadas (X/N).
+
+## Cambios de esquema
+- Nueva tabla `plan_pago (id_plan, id_pago, num_cuota, monto_cuota, fecha_vencimiento, id_estado)`.
+
+## Criterios de aceptación (Arreglo 6)
+| # | Criterio |
+|---|---|
+| AC-25 | Artículo >$10,000 no-inmueble → se ofrecen 3/6/12. |
+| AC-26 | Artículo >$10,000 inmueble → NO se ofrecen plazos. |
+| AC-27 | Artículo ≤$10,000 → NO se ofrecen plazos. |
+| AC-28 | Elegir 6 meses → 6 cuotas con fechas y montos correctos (suman el total). |
+| AC-29 | Las cuotas aparecen en el historial del comprador. |
+
+## Orden (Arreglo 6)
+1. Tabla `plan_pago` en `database.py`.
+2. Helper `add_months` + lógica en `realizar_pago()` (GET opciones, POST creación de cuotas).
+3. Template `realizar_pago.html` (selector de plan + tabla de cuotas).
+4. `mi_historial()` + `mi_historial.html` (indicador X/N cuotas).

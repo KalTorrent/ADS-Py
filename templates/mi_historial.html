@@ -112,7 +112,9 @@
       background:{% if p.estado_pago=='Verificado' %}#f0f9e8;color:#2d5a00
       {% elif p.estado_pago=='Vencido' %}#fff0f0;color:#c00
       {% else %}#fff9e6;color:#664d00{% endif %};">
-      {{ p.estado_pago }}</span></td>
+      {{ p.estado_pago }}</span>
+      {% if planes.get(p.id_subasta) %}<div style="font-size:11px;color:var(--eb-text2);margin-top:2px;">A plazos: {{ planes[p.id_subasta][0] }}/{{ planes[p.id_subasta][1] }} cuotas pagadas</div>{% endif %}
+    </td>
     <td style="color:var(--eb-text2);">{{ p.fecha_limite[:16] }}</td>
   </tr>
   {% endfor %}

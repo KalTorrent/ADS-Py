@@ -223,6 +223,16 @@ def init_db():
         ruta        TEXT    NOT NULL,
         fecha       TEXT    NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- AC-PLAN: Plan de pagos a plazos (RN-27)
+    CREATE TABLE IF NOT EXISTS plan_pago (
+        id_plan           INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_pago           INTEGER NOT NULL REFERENCES pago(id_pago),
+        num_cuota         INTEGER NOT NULL,
+        monto_cuota       REAL    NOT NULL,
+        fecha_vencimiento TEXT    NOT NULL,
+        id_estado         INTEGER NOT NULL DEFAULT 1 REFERENCES cat_estado_pago(id)
+    );
     """)
 
     conn.commit()

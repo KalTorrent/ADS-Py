@@ -56,6 +56,14 @@ def now_str():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
 
+def add_months(dt, months):
+    """Suma meses a una fecha (día acotado a 28 para evitar desbordes de mes)."""
+    m = dt.month - 1 + months
+    y = dt.year + m // 12
+    m = m % 12 + 1
+    return dt.replace(year=y, month=m, day=min(dt.day, 28))
+
+
 def verificar_aprobacion_automatica(db):
     """RN-02: aprueba artículos generales si venció el plazo sin acción."""
     pendientes = db.execute(
@@ -931,6 +939,20 @@ def realizar_pago(id_sub):
                 "UPDATE pago SET comprobante=?, id_estado=2, fecha_pago=? WHERE id_pago=?",
                 (fname, now_str(), pago_id)
             )
+            # RN-27: si eligió plazos y aplica, crear las cuotas
+            plan = request.form.get("plan", "completo")
+            if plan in ("3", "6", "12") and pago["monto"] > 10000 and sub["tipo_art"] != 3:
+                ya = db.execute("SELECT COUNT(*) c FROM plan_pago WHERE id_pago=?", (pago_id,)).fetchone()["c"]
+                if not ya:
+                    n = int(plan)
+                    base = round(pago["monto"] / n, 2)
+                    for i in range(1, n + 1):
+                        venc = add_months(datetime.datetime.utcnow(), i).strftime("%Y-%m-%d %H:%M:%S")
+                        cuota_monto = base if i < n else round(pago["monto"] - base * (n - 1), 2)
+                        db.execute(
+                            "INSERT INTO plan_pago (id_pago,num_cuota,monto_cuota,fecha_vencimiento,id_estado) VALUES(?,?,?,?,1)",
+                            (pago_id, i, cuota_monto, venc)
+                        )
             # Notificar al vendedor
             sub_full = db.execute(
                 "SELECT a.id_vendedor FROM subasta s JOIN articulo a ON a.id_articulo=s.id_articulo WHERE s.id_subasta=?",
@@ -946,8 +968,19 @@ def realizar_pago(id_sub):
             return redirect(url_for("mi_historial"))
         else:
             flash("Debes adjuntar el comprobante de pago.", "danger")
+    monto_pago = pago["monto"] if pago else sub["precio_actual"]
+    aplica_plazos = monto_pago > 10000 and sub["tipo_art"] != 3
+    opciones = [{"n": n, "cuota": round(monto_pago / n, 2)} for n in (3, 6, 12)] if aplica_plazos else []
+    cuotas = []
+    if pago:
+        cuotas = db.execute(
+            "SELECT num_cuota, monto_cuota, fecha_vencimiento, id_estado FROM plan_pago WHERE id_pago=? ORDER BY num_cuota",
+            (pago["id_pago"],)
+        ).fetchall()
     db.close()
-    return render_template("realizar_pago.html", sub=sub, pago=pago)
+    return render_template("realizar_pago.html", sub=sub, pago=pago,
+                           monto_pago=monto_pago, aplica_plazos=aplica_plazos,
+                           opciones=opciones, cuotas=cuotas)
 
 
 # ── Comprador: Confirmar recepción y calificar ─────────────────────────────────
@@ -1089,10 +1122,20 @@ def mi_historial():
     imagenes_recepcion = {}
     for r in imgs:
         imagenes_recepcion.setdefault(r["id_subasta"], []).append(r["ruta"])
+    # RN-27: planes de pago a plazos (cuotas pagadas / total) por subasta
+    planes = db.execute(
+        """SELECT p.id_subasta, COUNT(pp.id_plan) AS total,
+                  SUM(CASE WHEN pp.id_estado=3 THEN 1 ELSE 0 END) AS pagadas
+           FROM plan_pago pp JOIN pago p ON p.id_pago = pp.id_pago
+           WHERE p.id_comprador=?
+           GROUP BY p.id_subasta""",
+        (session["user_id"],)
+    ).fetchall()
+    planes_dict = {r["id_subasta"]: (r["pagadas"] or 0, r["total"]) for r in planes}
     db.close()
     return render_template("mi_historial.html",
                            ofertas=ofertas, pagos=pagos, ganadas=ganadas,
-                           imagenes_recepcion=imagenes_recepcion)
+                           imagenes_recepcion=imagenes_recepcion, planes=planes_dict)
 
 
 # ── Notificaciones ─────────────────────────────────────────────────────────────

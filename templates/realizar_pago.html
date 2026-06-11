@@ -13,7 +13,7 @@
       </div>
       <div style="text-align:right;">
         <div style="font-size:12px;color:var(--eb-text2);">Monto a pagar</div>
-        <div style="font-size:22px;font-weight:700;color:var(--eb-text);">${{ "%.2f"|format(sub.precio_actual) }}</div>
+        <div style="font-size:22px;font-weight:700;color:var(--eb-text);">${{ "%.2f"|format(monto_pago) }}</div>
       </div>
     </div>
     {% if pago %}
@@ -27,9 +27,46 @@
     </div>
   </div>
 
+  {% if cuotas %}
+  <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:20px;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:12px;">Plan de pagos a plazos (RN-27)</div>
+    <table class="eb-table">
+      <thead><tr><th>Cuota</th><th>Monto</th><th>Vence</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for c in cuotas %}
+      <tr>
+        <td>{{ c.num_cuota }}</td>
+        <td style="font-weight:700;">${{ "%.2f"|format(c.monto_cuota) }}</td>
+        <td style="color:var(--eb-text2);">{{ c.fecha_vencimiento[:10] }}</td>
+        <td>
+          <span style="font-size:11px;padding:2px 8px;border-radius:2px;font-weight:600;
+            background:{% if c.id_estado==3 %}#f0f9e8;color:#2d5a00{% else %}#f3f3f3;color:#555{% endif %};">
+            {% if c.id_estado==3 %}Pagada{% else %}Pendiente{% endif %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
   <div style="background:#fff;border:1px solid var(--eb-border);border-radius:4px;padding:20px;">
     <div style="font-size:15px;font-weight:700;margin-bottom:14px;">Adjuntar comprobante</div>
     <form method="POST" enctype="multipart/form-data">
+      {% if aplica_plazos and not cuotas %}
+      <div style="margin-bottom:16px;">
+        <label class="eb-form-label">Forma de pago (RN-27: monto &gt; $10,000)</label>
+        <label style="display:block;font-size:13px;margin:6px 0;cursor:pointer;">
+          <input type="radio" name="plan" value="completo" checked> Pago completo — ${{ "%.2f"|format(monto_pago) }}
+        </label>
+        {% for o in opciones %}
+        <label style="display:block;font-size:13px;margin:6px 0;cursor:pointer;">
+          <input type="radio" name="plan" value="{{ o.n }}"> {{ o.n }} meses — ${{ "%.2f"|format(o.cuota) }}/mes
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
       <div style="margin-bottom:16px;">
         <label class="eb-form-label">Comprobante de pago (JPG, PNG o PDF — máx. 5 MB)</label>
         <input type="file" name="comprobante" class="eb-input" accept=".jpg,.jpeg,.png,.pdf" required
