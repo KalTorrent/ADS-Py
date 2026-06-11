@@ -52,6 +52,16 @@ def notificar(db, id_usuario, mensaje, tipo="Info", id_ref=None):
     )
 
 
+def enviar_correo(db, id_usuario, asunto, cuerpo):
+    """C10: simula el envío de correo registrándolo en correo_salida (no usa SMTP real)."""
+    u = db.execute("SELECT correo FROM usuario WHERE id_usuario=?", (id_usuario,)).fetchone()
+    correo_destino = u["correo"] if u else ""
+    db.execute(
+        "INSERT INTO correo_salida (id_destinatario, correo_destino, asunto, cuerpo) VALUES (?,?,?,?)",
+        (id_usuario, correo_destino, asunto, cuerpo)
+    )
+
+
 def now_str():
     return datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -105,6 +115,14 @@ def verificar_pagos_vencidos(db):
         notificar(db, p["id_comprador"],
                   "MSG-10: El plazo de pago venció. La compra fue reasignada.", "Advertencia",
                   p["id_subasta"])
+        # C10: correo stub por pago vencido
+        art = db.execute(
+            "SELECT a.titulo FROM subasta s JOIN articulo a ON a.id_articulo=s.id_articulo WHERE s.id_subasta=?",
+            (p["id_subasta"],)
+        ).fetchone()
+        titulo_v = art["titulo"] if art else f"#{p['id_subasta']}"
+        enviar_correo(db, p["id_comprador"], f"Tu pago ha vencido: {titulo_v}",
+                      f"El plazo de pago de '{titulo_v}' venció. La compra será reasignada (RN-17/18).")
         if not p["es_segundo"]:
             seg = db.execute(
                 """SELECT o.id_comprador, o.monto
@@ -166,6 +184,14 @@ def cerrar_subasta_con_ganador(db, id_sub, id_ganador, monto, tipo_art):
     notificar(db, id_ganador,
               f"MSG-06: ¡Ganaste la subasta! Completa tu pago antes de {limite}.",
               "Exito", id_sub)
+    # C10: correo stub al ganador
+    art = db.execute(
+        "SELECT a.titulo FROM subasta s JOIN articulo a ON a.id_articulo=s.id_articulo WHERE s.id_subasta=?",
+        (id_sub,)
+    ).fetchone()
+    titulo = art["titulo"] if art else f"#{id_sub}"
+    enviar_correo(db, id_ganador, f"Has ganado la subasta: {titulo}",
+                  f"¡Felicidades! Ganaste '{titulo}' por ${monto:,.2f}. Completa tu pago antes de {limite}.")
 
 
 def verificar_decremento_holandesa(db):
@@ -421,6 +447,22 @@ def admin_reportes():
                            subastas=subastas, validaciones=validaciones, pagos=pagos,
                            anio=anio, mes=mes, nombre_mes=MESES_ES[mes],
                            meses=MESES_ES, anios=anios)
+
+
+@app.route("/admin/correos")
+@admin_required
+def admin_correos():
+    """C10: Bandeja de correos de salida (stub, sin SMTP real)."""
+    db = get_db()
+    correos = db.execute(
+        """SELECT c.id_correo, c.correo_destino, c.asunto, c.cuerpo, c.fecha, c.enviado,
+                  u.nombre AS destinatario
+           FROM correo_salida c
+           JOIN usuario u ON u.id_usuario = c.id_destinatario
+           ORDER BY c.fecha DESC, c.id_correo DESC"""
+    ).fetchall()
+    db.close()
+    return render_template("admin_correos.html", correos=correos)
 
 
 @app.route("/admin/validar/<int:id_art>", methods=["GET", "POST"])

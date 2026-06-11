@@ -233,6 +233,17 @@ def init_db():
         fecha_vencimiento TEXT    NOT NULL,
         id_estado         INTEGER NOT NULL DEFAULT 1 REFERENCES cat_estado_pago(id)
     );
+
+    -- AC-MAIL: Bandeja de correos de salida (stub C10, sin SMTP real)
+    CREATE TABLE IF NOT EXISTS correo_salida (
+        id_correo       INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_destinatario INTEGER NOT NULL REFERENCES usuario(id_usuario),
+        correo_destino  TEXT    NOT NULL,
+        asunto          TEXT    NOT NULL,
+        cuerpo          TEXT,
+        fecha           TEXT    NOT NULL DEFAULT (datetime('now')),
+        enviado         INTEGER NOT NULL DEFAULT 0
+    );
     """)
 
     conn.commit()

@@ -276,3 +276,39 @@ Inmuebles y montos ≤ $10,000 → solo pago completo.
 2. Helper `add_months` + lógica en `realizar_pago()` (GET opciones, POST creación de cuotas).
 3. Template `realizar_pago.html` (selector de plan + tabla de cuotas).
 4. `mi_historial()` + `mi_historial.html` (indicador X/N cuotas).
+
+---
+
+# Decisiones de implementación — Arreglo 7: Correo stub / bandeja de salida (C10)
+
+## Enfoque
+**Fuente:** restricciones.txt (notificaciones por correo)
+No se integra SMTP real. Se simula el envío con una **bandeja de salida** (`correo_salida`):
+cada vez que el sistema "enviaría" un correo, registra el destinatario, asunto y cuerpo.
+Esto demuestra que el sistema sabe *cuándo* y *a quién* notificar, sin depender de un mail server.
+
+## Puntos de envío (los dos que pide el profesor)
+- **Al GANAR una subasta** (dentro de `cerrar_subasta_con_ganador`):
+  asunto `Has ganado la subasta: {titulo}`.
+- **Al VENCER un pago** (dentro de `verificar_pagos_vencidos`):
+  asunto `Tu pago ha vencido: {titulo}`.
+
+## Cambios de esquema
+- Nueva tabla `correo_salida (id_correo, id_destinatario, correo_destino, asunto, cuerpo, fecha, enviado)`.
+
+## Acceso
+- `/admin/correos` protegida con `@admin_required` (AC-33).
+
+## Criterios de aceptación (Arreglo 7)
+| # | Criterio |
+|---|---|
+| AC-30 | Cierre con ganador → fila en `correo_salida` con datos correctos. |
+| AC-31 | Pago vencido → fila en `correo_salida`. |
+| AC-32 | `/admin/correos` muestra toda la bandeja. |
+| AC-33 | Solo accesible para admin. |
+
+## Orden (Arreglo 7)
+1. Tabla `correo_salida` en `database.py`.
+2. Helper `enviar_correo(db, id_usuario, asunto, cuerpo)`.
+3. Llamadas en `cerrar_subasta_con_ganador` y `verificar_pagos_vencidos`.
+4. Ruta `/admin/correos` + template + enlace en navbar.
