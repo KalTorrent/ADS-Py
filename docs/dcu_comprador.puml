@@ -1,0 +1,50 @@
+@startuml dcu_comprador
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+title Diagrama de Casos de Uso - Comprador
+
+actor "Comprador" as comp
+
+rectangle "Sistema de Gestión de Subastas" {
+  usecase "CU-C01\nRegistrarse" as C01
+  usecase "CU-C02\nIniciar sesión" as C02
+  usecase "CU-C03\nConsultar catálogo" as C03
+  usecase "CU-C04\nOfertar (Inglesa)" as C04
+  usecase "CU-C05\nAceptar precio (Holandesa)" as C05
+  usecase "CU-C06\nOfertar (Sellada)" as C06
+  usecase "CU-C07\nRealizar pago" as C07
+  usecase "CU-C08\nConfirmar recepción" as C08
+  usecase "CU-C09\nConsultar historial" as C09
+  usecase "CU-C10\nVer notificaciones" as C10
+
+  usecase "Verificar pagos pendientes" as VPP
+  usecase "Calificar al vendedor" as CAL
+  usecase "Adjuntar evidencia fotográfica" as IMG
+  usecase "Pagar a plazos (3/6/12)" as PLAZOS
+}
+
+comp --> C01
+comp --> C02
+comp --> C03
+comp --> C04
+comp --> C05
+comp --> C06
+comp --> C07
+comp --> C08
+comp --> C09
+comp --> C10
+
+' include: validaciones/pasos que SIEMPRE ocurren dentro del CU
+C04 ..> VPP : <<include>>
+C05 ..> VPP : <<include>>
+C06 ..> VPP : <<include>>
+C08 ..> CAL : <<include>>
+C08 ..> IMG : <<include>>
+
+' extend: variantes opcionales del flujo
+C05 ..> C04 : <<extend>>
+C06 ..> C04 : <<extend>>
+PLAZOS ..> C07 : <<extend>>
+
+@enduml

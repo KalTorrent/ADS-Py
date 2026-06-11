@@ -11,3 +11,6 @@ uploads/
 
 # Variables de entorno
 .env
+
+# Renderizador de diagramas (binario, no versionar)
+plantuml.jar

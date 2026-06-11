@@ -1,0 +1,52 @@
+@startuml dcu_admin
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+title Diagrama de Casos de Uso - Administrador
+
+actor "Administrador" as admin
+
+rectangle "Sistema de Gestión de Subastas" {
+  usecase "CU-A01\nIniciar sesión" as A01
+  usecase "CU-A02\nValidar artículo general" as A02
+  usecase "CU-A03\nValidar vehículo/inmueble" as A03
+  usecase "CU-A04\nExtender plazo de validación" as A04
+  usecase "CU-A05\nCancelar subasta" as A05
+  usecase "CU-A06\nGestionar usuarios" as A06
+  usecase "CU-A07\nCancelar por fraude" as A07
+  usecase "CU-A08\nReportes mensuales" as A08
+  usecase "CU-A09\nVer bandeja de correos" as A09
+  usecase "CU-A10\nVer historial de pujas" as A10
+
+  usecase "Registrar en log_admin" as LOG
+  usecase "Notificar a participantes" as NOTIF
+}
+
+admin --> A01
+admin --> A02
+admin --> A03
+admin --> A04
+admin --> A05
+admin --> A06
+admin --> A07
+admin --> A08
+admin --> A09
+admin --> A10
+
+' include: pasos que SIEMPRE ocurren dentro del CU
+A02 ..> LOG : <<include>>
+A03 ..> LOG : <<include>>
+A04 ..> LOG : <<include>>
+A05 ..> LOG : <<include>>
+A06 ..> LOG : <<include>>
+A07 ..> LOG : <<include>>
+
+A05 ..> NOTIF : <<include>>
+A07 ..> NOTIF : <<include>>
+
+' extend: A04 es una extensión opcional del flujo de validación general
+A04 ..> A02 : <<extend>>
+' A07 es una variante (extensión) de la gestión de usuarios ante fraude
+A07 ..> A06 : <<extend>>
+
+@enduml
