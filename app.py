@@ -140,10 +140,63 @@ def verificar_pagos_vencidos(db):
         db.commit()
 
 
+def cerrar_subasta_con_ganador(db, id_sub, id_ganador, monto, tipo_art):
+    """RN-13/14/15/16: marca Finalizada, fija ganador y crea pago con plazo correcto al cierre."""
+    plazos = {1: 48, 2: 72, 3: 168}
+    horas = plazos.get(tipo_art, 48)
+    limite = (datetime.datetime.utcnow() +
+              datetime.timedelta(hours=horas)).strftime("%Y-%m-%d %H:%M:%S")
+    db.execute(
+        "UPDATE subasta SET id_estado=2, id_ganador=? WHERE id_subasta=?",
+        (id_ganador, id_sub)
+    )
+    db.execute(
+        """INSERT INTO pago (id_subasta, id_comprador, monto, id_estado, fecha_limite)
+           VALUES (?, ?, ?, 1, ?)""",
+        (id_sub, id_ganador, monto, limite)
+    )
+    notificar(db, id_ganador,
+              f"MSG-06: ¡Ganaste la subasta! Completa tu pago antes de {limite}.",
+              "Exito", id_sub)
+
+
+def verificar_cierre_subastas(db):
+    """RN-13: cierra subastas cuya fecha_fin ya pasó. Desempate: monto DESC, fecha_oferta ASC."""
+    vencidas = db.execute(
+        """SELECT s.id_subasta, a.id_tipo AS tipo_art, a.id_vendedor
+           FROM subasta s
+           JOIN articulo a ON a.id_articulo = s.id_articulo
+           WHERE s.id_estado = 1 AND s.fecha_fin <= ?""",
+        (now_str(),)
+    ).fetchall()
+    for s in vencidas:
+        ganador = db.execute(
+            """SELECT id_comprador, monto FROM oferta
+               WHERE id_subasta = ?
+               ORDER BY monto DESC, fecha_oferta ASC
+               LIMIT 1""",
+            (s["id_subasta"],)
+        ).fetchone()
+        if ganador:
+            cerrar_subasta_con_ganador(
+                db, s["id_subasta"], ganador["id_comprador"],
+                ganador["monto"], s["tipo_art"]
+            )
+        else:
+            db.execute("UPDATE subasta SET id_estado=3 WHERE id_subasta=?",
+                       (s["id_subasta"],))
+            notificar(db, s["id_vendedor"],
+                      "MSG-13: Tu subasta venció sin ofertas y fue declarada desierta.",
+                      "Info", s["id_subasta"])
+    if vencidas:
+        db.commit()
+
+
 # ── Rutas principales ──────────────────────────────────────────────────────────
 @app.route("/")
 def index():
     db = get_db()
+    verificar_cierre_subastas(db)
     verificar_aprobacion_automatica(db)
     verificar_pagos_vencidos(db)
     subastas = db.execute(
@@ -233,6 +286,7 @@ def logout():
 def admin_dashboard():
     """CU-A01: Panel principal del administrador"""
     db = get_db()
+    verificar_cierre_subastas(db)
     verificar_aprobacion_automatica(db)
     pendientes = db.execute(
         """SELECT a.id_articulo, a.titulo, t.tipo as tipo_art,
@@ -530,6 +584,7 @@ def catalogo():
     categoria = request.args.get("categoria", "")
     busqueda  = request.args.get("q", "")
     db = get_db()
+    verificar_cierre_subastas(db)
     query = """
         SELECT s.id_subasta, a.titulo, a.ubicacion, s.precio_actual,
                s.fecha_fin, t.tipo as tipo_subasta, ta.tipo as tipo_art,
@@ -560,6 +615,7 @@ def catalogo():
 def detalle_subasta(id_sub):
     """CU-C03/C04: Detalle de artículo (RN-10: solo puja actual)"""
     db = get_db()
+    verificar_cierre_subastas(db)
     subasta = db.execute(
         """SELECT s.*, a.titulo, a.descripcion, a.ubicacion, a.imagen_path,
                   a.id_vendedor, ta.tipo as tipo_art, ts.tipo as tipo_sub,
@@ -610,6 +666,11 @@ def realizar_oferta(id_sub):
     sub = db.execute("SELECT * FROM subasta WHERE id_subasta=?", (id_sub,)).fetchone()
     if not sub or sub["id_estado"] != 1:
         flash("ERR-03: La subasta ya cerró.", "danger")
+        db.close()
+        return redirect(url_for("detalle_subasta", id_sub=id_sub))
+    # RN-13: rechazar puja aunque el barrido aún no haya corrido
+    if sub["fecha_fin"] <= now_str():
+        flash("ERR-03: La subasta ya venció por tiempo.", "danger")
         db.close()
         return redirect(url_for("detalle_subasta", id_sub=id_sub))
     # RN-11: verificar pagos pendientes
@@ -678,19 +739,12 @@ def realizar_pago(id_sub):
         (id_sub, session["user_id"])
     ).fetchone()
     if request.method == "POST":
+        # RN-14/15/16: la fila pago fue creada al cerrar la subasta (cerrar_subasta_con_ganador)
         if not pago:
-            tipo_art = sub["tipo_art"]
-            plazos   = {1: 48, 2: 72, 3: 168}
-            horas    = plazos.get(tipo_art, 48)
-            limite   = (datetime.datetime.utcnow() +
-                        datetime.timedelta(hours=horas)).strftime("%Y-%m-%d %H:%M:%S")
-            db.execute(
-                "INSERT INTO pago (id_subasta,id_comprador,monto,fecha_limite) VALUES(?,?,?,?)",
-                (id_sub, session["user_id"], sub["precio_actual"], limite)
-            )
-            pago_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
-        else:
-            pago_id = pago["id_pago"]
+            flash("No se encontró el registro de pago. Contacta al administrador.", "danger")
+            db.close()
+            return redirect(url_for("mi_historial"))
+        pago_id = pago["id_pago"]
         comprobante = request.files.get("comprobante")
         if comprobante and comprobante.filename:
             if not allowed_file(comprobante.filename):
