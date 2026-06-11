@@ -1,4 +1,4 @@
-# 🔨 SubastaApp — Sistema de Gestión de Subastas
+# SubastaApp — Sistema de Gestión de Subastas
 
 Plataforma web de subastas en línea desarrollada con **Python + Flask + SQLite**.  
 Diseñada para el mercado mexicano, soporta tres modalidades de subasta y dos actores principales: **Administrador** y **Comprador**.
