@@ -167,3 +167,37 @@ antes de crear la cuenta y rechaza con ERR-12.
 1. Tabla `lista_negra` en `database.py` + seed de un correo de prueba.
 2. Acción "CancelarFraude" en `admin_gestionar_usuario()`.
 3. Validación de lista negra en `registro()`.
+
+---
+
+# Decisiones de implementación — Arreglo 4: Reportes mensuales del admin (CU-A08)
+
+## Funcionalidad
+**Fuente:** CU-A08 (DCU-01), restricciones.txt
+Nueva ruta `/admin/reportes` que resume la actividad de un mes:
+1. **Subastas por estado** (Activa, Finalizada, Desierta, Cancelada).
+2. **Validaciones realizadas** (Aprobado, Rechazado, Automatico).
+3. **Transacciones/pagos** (completados, pendientes, vencidos) + monto transado.
+
+## Criterios de corte de período (para que los conteos sean reproducibles — AC-19)
+- Subastas: `strftime('%Y-%m', fecha_inicio) = periodo`.
+- Validaciones realizadas: `decision IS NOT NULL AND strftime('%Y-%m', fecha_decision) = periodo`.
+- Pagos: `strftime('%Y-%m', fecha_limite) = periodo`.
+  - Completados = Verificado (id_estado=3); Pendientes = Pendiente(1)+EnVerificacion(2);
+    Vencidos = Vencido(4). Monto transado = SUM(monto) de completados.
+
+## Acceso
+- Protegida con `@admin_required` (AC-20): un no-admin es redirigido a `index`.
+
+## Criterios de aceptación (Arreglo 4)
+| # | Criterio |
+|---|---|
+| AC-18 | `/admin/reportes` muestra las 3 secciones con datos del mes actual. |
+| AC-19 | Los conteos cuadran con la BD (verificado con SQL). |
+| AC-20 | Solo accesible para admin; redirige si no lo es. |
+
+## Orden de implementación (Arreglo 4)
+1. Ruta `/admin/reportes` en `app.py`.
+2. Template `admin_reportes.html` (Bootstrap).
+3. Enlace en el navbar admin (`base.html`).
+4. Filtro mes/año (form GET).

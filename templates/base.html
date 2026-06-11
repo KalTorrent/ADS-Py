@@ -210,6 +210,9 @@ body{background:var(--eb-bg);font-family:"Helvetica Neue",Helvetica,Arial,sans-s
       <a href="{{ url_for('admin_dashboard') }}" class="special" {% if request.endpoint=='admin_dashboard' %}style="border-bottom-color:var(--eb-red)"{% endif %}>
         🛡️ Panel Admin
       </a>
+      <a href="{{ url_for('admin_reportes') }}" class="special" {% if request.endpoint=='admin_reportes' %}style="border-bottom-color:var(--eb-red)"{% endif %}>
+        📊 Reportes
+      </a>
       {% endif %}
     </nav>
   </div>

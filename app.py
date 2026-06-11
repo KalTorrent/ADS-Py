@@ -353,6 +353,68 @@ def admin_dashboard():
                            usuarios=usuarios)
 
 
+MESES_ES = ["", "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+
+@app.route("/admin/reportes")
+@admin_required
+def admin_reportes():
+    """CU-A08: Reportes mensuales del administrador."""
+    db = get_db()
+    hoy = datetime.datetime.utcnow()
+    try:
+        anio = int(request.args.get("anio", hoy.year))
+        mes  = int(request.args.get("mes", hoy.month))
+    except ValueError:
+        anio, mes = hoy.year, hoy.month
+    periodo = f"{anio:04d}-{mes:02d}"
+
+    # 1. Subastas por estado
+    filas_sub = db.execute(
+        """SELECT e.estado, COUNT(*) AS total
+           FROM subasta s JOIN cat_estado_subasta e ON e.id = s.id_estado
+           WHERE strftime('%Y-%m', s.fecha_inicio) = ?
+           GROUP BY s.id_estado""", (periodo,)).fetchall()
+    sub_d = {r["estado"]: r["total"] for r in filas_sub}
+    subastas = {e: sub_d.get(e, 0) for e in ["Activa", "Finalizada", "Desierta", "Cancelada"]}
+
+    # 2. Validaciones realizadas
+    filas_val = db.execute(
+        """SELECT decision, COUNT(*) AS total
+           FROM validacion
+           WHERE decision IS NOT NULL AND strftime('%Y-%m', fecha_decision) = ?
+           GROUP BY decision""", (periodo,)).fetchall()
+    val_d = {r["decision"]: r["total"] for r in filas_val}
+    validaciones = {
+        "Aprobado":   val_d.get("Aprobado", 0),
+        "Rechazado":  val_d.get("Rechazado", 0),
+        "Automatico": val_d.get("Automatico", 0),
+    }
+
+    # 3. Pagos / transacciones
+    filas_pago = db.execute(
+        """SELECT id_estado, COUNT(*) AS total, COALESCE(SUM(monto),0) AS suma
+           FROM pago
+           WHERE strftime('%Y-%m', fecha_limite) = ?
+           GROUP BY id_estado""", (periodo,)).fetchall()
+    pago_d = {r["id_estado"]: r for r in filas_pago}
+    def pc(*ids): return sum(pago_d[i]["total"] for i in ids if i in pago_d)
+    pagos = {
+        "completados": pc(3),
+        "pendientes":  pc(1, 2),
+        "vencidos":    pc(4),
+        "monto_transado": pago_d[3]["suma"] if 3 in pago_d else 0,
+    }
+
+    anios = list(range(hoy.year - 2, hoy.year + 1))
+    db.close()
+    return render_template("admin_reportes.html",
+                           subastas=subastas, validaciones=validaciones, pagos=pagos,
+                           anio=anio, mes=mes, nombre_mes=MESES_ES[mes],
+                           meses=MESES_ES, anios=anios)
+
+
 @app.route("/admin/validar/<int:id_art>", methods=["GET", "POST"])
 @admin_required
 def admin_validar(id_art):

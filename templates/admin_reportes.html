@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Reportes — Admin{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3 class="fw-bold" style="color:var(--primary)">📊 Reportes — {{ nombre_mes }} {{ anio }}</h3>
+  <form method="GET" class="d-flex gap-2">
+    <select name="mes" class="form-select form-select-sm" style="width:auto">
+      {% for m in range(1,13) %}
+      <option value="{{ m }}" {% if m==mes %}selected{% endif %}>{{ meses[m] }}</option>
+      {% endfor %}
+    </select>
+    <select name="anio" class="form-select form-select-sm" style="width:auto">
+      {% for a in anios %}<option value="{{ a }}" {% if a==anio %}selected{% endif %}>{{ a }}</option>{% endfor %}
+    </select>
+    <button class="btn btn-sm btn-primary">Ver</button>
+  </form>
+</div>
+
+<!-- 1. Subastas por estado -->
+<h6 class="fw-bold text-muted mb-2">Subastas del mes</h6>
+<div class="row g-3 mb-4">
+  {% for estado, valor in [('Activa', subastas.Activa), ('Finalizada', subastas.Finalizada),
+                           ('Desierta', subastas.Desierta), ('Cancelada', subastas.Cancelada)] %}
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold">{{ valor }}</div>
+      <div class="text-muted small">{{ estado }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- 2. Validaciones -->
+<h6 class="fw-bold text-muted mb-2">Validaciones realizadas</h6>
+<div class="row g-3 mb-4">
+  {% for etiqueta, valor in [('Aprobadas', validaciones.Aprobado), ('Rechazadas', validaciones.Rechazado),
+                             ('Auto-aprobadas', validaciones.Automatico)] %}
+  <div class="col-6 col-md-4">
+    <div class="card text-center p-3">
+      <div class="display-6 fw-bold">{{ valor }}</div>
+      <div class="text-muted small">{{ etiqueta }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- 3. Transacciones -->
+<h6 class="fw-bold text-muted mb-2">Transacciones del período</h6>
+<div class="row g-3">
+  <div class="col-6 col-md-3"><div class="card text-center p-3"><div class="display-6 fw-bold text-success">{{ pagos.completados }}</div><div class="text-muted small">Completados</div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center p-3"><div class="display-6 fw-bold text-warning">{{ pagos.pendientes }}</div><div class="text-muted small">Pendientes</div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center p-3"><div class="display-6 fw-bold text-danger">{{ pagos.vencidos }}</div><div class="text-muted small">Vencidos</div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center p-3"><div class="h4 fw-bold mb-0 mt-2">${{ "%.2f"|format(pagos.monto_transado) }}</div><div class="text-muted small">Monto transado</div></div></div>
+</div>
+{% endblock %}
