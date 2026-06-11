@@ -262,6 +262,12 @@ def registro():
             flash("El correo ya está registrado. Intenta iniciar sesión.", "warning")
             db.close()
             return render_template("registro.html")
+        # RN-26: rechazar correos en lista negra
+        en_lista = db.execute("SELECT id_lista FROM lista_negra WHERE correo=?", (correo,)).fetchone()
+        if en_lista:
+            flash("ERR-12: Este correo no puede registrarse. Contacta al soporte.", "danger")
+            db.close()
+            return render_template("registro.html")
         db.execute(
             "INSERT INTO usuario (nombre,correo,password_hash,id_tipo,terminos_ok) VALUES(?,?,?,2,1)",
             (nombre, correo, generate_password_hash(pwd))
@@ -474,6 +480,34 @@ def admin_gestionar_usuario(id_usr):
         db.execute("INSERT INTO log_admin (id_admin,accion,detalle) VALUES(?,?,?)",
                    (session["user_id"], "ReactivarCuenta", f"Usuario {id_usr}"))
         flash(f"Cuenta de {usuario['nombre']} reactivada.", "success")
+    elif accion == "CancelarFraude":
+        # RN-26: lista negra + cancelar subastas activas + suspender cuenta
+        db.execute("INSERT OR IGNORE INTO lista_negra (correo,motivo) VALUES(?,?)",
+                   (usuario["correo"], "Cuenta cancelada por fraude"))
+        db.execute("UPDATE usuario SET id_estado=2 WHERE id_usuario=?", (id_usr,))
+        # Cancelar todas las subastas activas donde el usuario es vendedor
+        activas = db.execute(
+            """SELECT s.id_subasta FROM subasta s
+               JOIN articulo a ON a.id_articulo = s.id_articulo
+               WHERE a.id_vendedor=? AND s.id_estado=1""",
+            (id_usr,)
+        ).fetchall()
+        for s in activas:
+            db.execute("UPDATE subasta SET id_estado=4, motivo_cancel=? WHERE id_subasta=?",
+                       ("Cancelada por fraude del vendedor (RN-26)", s["id_subasta"]))
+            participantes = db.execute(
+                "SELECT DISTINCT id_comprador FROM oferta WHERE id_subasta=?", (s["id_subasta"],)
+            ).fetchall()
+            for p in participantes:
+                notificar(db, p["id_comprador"],
+                          "MSG-12: La subasta fue cancelada por fraude del vendedor.",
+                          "Advertencia", s["id_subasta"])
+        db.execute("INSERT INTO log_admin (id_admin,accion,detalle) VALUES(?,?,?)",
+                   (session["user_id"], "CancelarFraude",
+                    f"Usuario {id_usr} ({usuario['correo']}): {len(activas)} subasta(s) cancelada(s)"))
+        notificar(db, id_usr,
+                  "MSG-11: Tu cuenta fue suspendida por fraude y tus subastas canceladas.", "Error")
+        flash(f"Usuario {usuario['nombre']} marcado por fraude: {len(activas)} subasta(s) cancelada(s) y correo en lista negra.", "warning")
     db.commit()
     db.close()
     return redirect(url_for("admin_dashboard"))

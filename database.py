@@ -207,6 +207,14 @@ def init_db():
         detalle         TEXT,
         fecha           TEXT    NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- AC-LN: Lista negra de correos (RN-26)
+    CREATE TABLE IF NOT EXISTS lista_negra (
+        id_lista    INTEGER PRIMARY KEY AUTOINCREMENT,
+        correo      TEXT    NOT NULL UNIQUE,
+        motivo      TEXT,
+        fecha       TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
     """)
 
     conn.commit()
@@ -299,6 +307,12 @@ def seed_demo():
     c.execute(
         "INSERT INTO validacion (id_articulo,fecha_limite) VALUES(?,?)",
         (id_art2, limite)
+    )
+
+    # Lista negra demo (RN-26): correo bloqueado para probar rechazo en registro
+    c.execute(
+        "INSERT INTO lista_negra (correo,motivo) VALUES(?,?)",
+        ("fraude@mail.mx", "Cuenta fraudulenta de demostración")
     )
 
     conn.commit()

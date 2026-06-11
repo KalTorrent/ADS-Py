@@ -133,3 +133,37 @@ Inglesa (id_tipo=1)**. Holandesa y Sellada tienen su propia rama en `realizar_of
 4. Rama Sellada en `realizar_oferta`.
 5. Plantillas (`publicar.html`, `detalle_subasta.html`).
 6. Seed: una holandesa (1000/500/100) y una sellada.
+
+---
+
+# Decisiones de implementación — Arreglo 3: Lista negra y flujo de fraude (A6 + C1)
+
+## Reglas de negocio aplicadas
+
+### RN-26 — Cancelación por fraude
+**Fuente:** restricciones.txt, aud1.txt
+**Regla:** Cuando el administrador detecta fraude, debe:
+1. Agregar el correo del usuario a la **lista negra**.
+2. Cancelar **todas** las subastas activas del usuario (estado Cancelada + notificar a participantes).
+3. Suspender la cuenta del usuario.
+**Nota de estado:** el equipo aplica **Suspendida (id_estado=2)** según AC-15. RN-26 textual
+dice "Cancelada"; cambiar a id_estado=3 es un solo número si se prefiere.
+
+### RN-26 (registro) — Bloqueo de correos en lista negra
+**Regla:** Un correo presente en `lista_negra` no puede registrarse. `registro()` lo valida
+antes de crear la cuenta y rechaza con ERR-12.
+
+## Cambios de esquema
+- Nueva tabla `lista_negra (id_lista, correo UNIQUE, motivo, fecha)`.
+
+## Criterios de aceptación (Arreglo 3)
+| # | Criterio |
+|---|---|
+| AC-15 | Cancelar por fraude → correo en lista_negra + cuenta suspendida + subastas activas canceladas con notificación. |
+| AC-16 | Registro con correo en lista_negra → rechazado con ERR-12. |
+| AC-17 | Registro con correo limpio → funciona normal (no-regresión). |
+
+## Orden de implementación (Arreglo 3)
+1. Tabla `lista_negra` en `database.py` + seed de un correo de prueba.
+2. Acción "CancelarFraude" en `admin_gestionar_usuario()`.
+3. Validación de lista negra en `registro()`.
