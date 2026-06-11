@@ -1249,9 +1249,13 @@ def publicar_articulo():
             db.execute("INSERT INTO inmueble (id_articulo,tipo_propiedad,superficie_terreno,superficie_construida,num_habitaciones,ubicacion_detallada) VALUES(?,?,?,?,?,?)",
                        (id_art, request.form.get("tipo_prop",""), request.form.get("sup_t",0),
                         request.form.get("sup_c",0), request.form.get("hab",0), request.form.get("ubic_det","")))
-        # Crear validacion
-        limite_val = (datetime.datetime.utcnow() +
-                      datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+        # Crear validacion. A3/RN-03: solo General tiene plazo (30 min);
+        # vehiculos/inmuebles requieren revisión documental SIN límite de tiempo (fecha_limite NULL).
+        if id_tipo == 1:
+            limite_val = (datetime.datetime.utcnow() +
+                          datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            limite_val = None
         db.execute("INSERT INTO validacion (id_articulo,fecha_limite) VALUES(?,?)",
                    (id_art, limite_val))
         # Pre-crear subasta en estado "en espera" si es aprobado

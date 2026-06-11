@@ -21,8 +21,8 @@
         <td>{{ p.titulo }}</td>
         <td><span class="badge bg-secondary">{{ p.tipo_art }}</span></td>
         <td class="small">{{ p.fecha_registro[:16] }}</td>
-        <td class="small {% if p.tipo_art == 'General' %}text-danger fw-bold{% endif %}">
-          {% if p.tipo_art == 'General' %}⚠️ {{ p.fecha_limite[:16] if p.fecha_limite else 'N/A' }}{% else %}Sin límite{% endif %}
+        <td class="small {% if p.fecha_limite %}text-danger fw-bold{% endif %}">
+          {% if p.fecha_limite %}⚠️ {{ p.fecha_limite[:16] }}{% else %}Sin límite{% endif %}
         </td>
         <td><a href="{{ url_for('admin_validar', id_art=p.id_articulo) }}" class="btn btn-sm btn-primary">Revisar</a></td>
       </tr>

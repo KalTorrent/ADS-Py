@@ -1,0 +1,13 @@
+# Base de datos generada
+subasta.db
+
+# Bytecode de Python
+__pycache__/
+*.pyc
+
+# Archivos subidos en runtime
+static/uploads/recepciones/
+uploads/
+
+# Variables de entorno
+.env

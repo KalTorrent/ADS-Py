@@ -265,6 +265,8 @@ def seed_demo():
         ("Ana Compradora", "ana@mail.mx",     generate_password_hash("Ana12345"),  2, 1, 4.5, 2, 1),
         ("Carlos Compra",  "carlos@mail.mx",  generate_password_hash("Carlos1234"), 2, 1, 0, 0, 1),
         ("Vendedor Demo",  "vend@mail.mx",    generate_password_hash("Vend1234"),  3, 1, 4.2, 5, 1),
+        # A1: el profesor pidió 2 administradores con los mismos permisos
+        ("Admin Dos",      "admin2@subasta.mx", generate_password_hash("Admin1234"), 1, 1, 0, 0, 1),
     ]
     c.executemany(
         "INSERT INTO usuario (nombre,correo,password_hash,id_tipo,id_estado,reputacion,total_cal,terminos_ok) VALUES(?,?,?,?,?,?,?,?)",
@@ -330,12 +332,10 @@ def seed_demo():
         (id_art4, 3, 800, 800, 1)
     )
 
-    # Validacion pendiente para vehiculo
-    import datetime
-    limite = (datetime.datetime.utcnow() + datetime.timedelta(minutes=30)).strftime("%Y-%m-%d %H:%M:%S")
+    # Validacion pendiente para vehiculo (A3/RN-03: vehiculos/inmuebles SIN limite de tiempo)
     c.execute(
         "INSERT INTO validacion (id_articulo,fecha_limite) VALUES(?,?)",
-        (id_art2, limite)
+        (id_art2, None)
     )
 
     # Lista negra demo (RN-26): correo bloqueado para probar rechazo en registro

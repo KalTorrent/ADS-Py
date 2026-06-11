@@ -312,3 +312,37 @@ Esto demuestra que el sistema sabe *cuándo* y *a quién* notificar, sin depende
 2. Helper `enviar_correo(db, id_usuario, asunto, cuerpo)`.
 3. Llamadas en `cerrar_subasta_con_ganador` y `verificar_pagos_vencidos`.
 4. Ruta `/admin/correos` + template + enlace en navbar.
+
+---
+
+# Decisiones de implementación — Arreglo 8: Cosméticos y cierre
+
+## Cambios
+### A1 — Segundo administrador
+**Fuente:** aud1.txt ("son 2 admins con los mismos permisos")
+`seed_demo()` agrega `admin2@subasta.mx / Admin1234` ("Admin Dos"), insertado **al final**
+de la lista de usuarios para no desplazar los IDs demo (Ana=2, Carlos=3, Vendedor=4).
+
+### A3 — Validación de vehículo/inmueble sin fecha límite
+**Fuente:** aud1.txt/restricciones.txt ("sin límite de tiempo" para vehículo/inmueble)
+- `publicar_articulo()`: `fecha_limite` solo se fija para General (id_tipo=1); vehículo e
+  inmueble se insertan con `fecha_limite = NULL`.
+- Seed: la validación demo del vehículo pasa a `fecha_limite = NULL`.
+- `admin_dashboard.html`: muestra "Sin límite" cuando `fecha_limite` es NULL (en vez de inferir
+  por tipo), y la fecha con ⚠️ cuando existe.
+
+### A — README alineado a la realidad
+README reescrito para reflejar EXACTAMENTE lo implementado (3 tipos de subasta, cierre
+automático, lista negra, reportes `/admin/reportes`, pagos a plazos, imágenes de recepción,
+bandeja de correos). Se eliminaron funcionalidades fantasma del README anterior
+(`/admin/reporte`, flag `en_lista_negra`, `plan_pago` con interés, columnas inexistentes).
+
+### .gitignore
+Nuevo: `subasta.db`, `__pycache__/`, `*.pyc`, `static/uploads/recepciones/`, `uploads/`, `.env`.
+
+## Criterios de aceptación (Arreglo 8)
+| # | Criterio |
+|---|---|
+| AC-34 | Existen 2 admins en el seed. |
+| AC-35 | Validación de vehículo/inmueble sin `fecha_limite` (NULL); el dashboard dice "Sin límite". |
+| AC-36 | README refleja el estado real del código (sin funcionalidades fantasma). |
