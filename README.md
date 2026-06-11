@@ -340,7 +340,7 @@ El contador de notificaciones no leídas en el navbar se actualiza cada **30 seg
 
 ### Contraseñas — bcrypt vía Werkzeug
 
-Las contraseñas nunca se almacenan en texto claro. Al registrarse se genera un hash con salida aleatoria:
+Las contraseñas nunca se almacenan en texto claro. Al registrarse se genera un hash con sal aleatoria:
 
 ```python
 from werkzeug.security import generate_password_hash, check_password_hash
