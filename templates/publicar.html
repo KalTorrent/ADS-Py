@@ -74,7 +74,7 @@
           </select>
         </div>
         <div>
-          <label class="eb-form-label">Precio base ($)</label>
+          <label class="eb-form-label" id="lbl-precio-base">Precio base ($)</label>
           <input type="number" name="precio_base" class="eb-input" step="0.01" min="1" required>
         </div>
         <div>
@@ -84,6 +84,24 @@
         <div>
           <label class="eb-form-label">Duración (días)</label>
           <input type="number" name="dias_subasta" class="eb-input" min="1" max="30" value="3">
+        </div>
+      </div>
+
+      <!-- Campos exclusivos Holandesa (RN-09) -->
+      <div id="campos-holandesa" style="display:none;margin-bottom:20px;">
+        <div style="background:#fff4e5;border:1px solid #f0a000;border-radius:4px;padding:14px;">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#a35c00;">📉 Subasta holandesa — el precio arranca alto y baja cada hora (RN-09)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label class="eb-form-label">Precio piso ($)</label>
+              <input type="number" name="precio_piso" class="eb-input" step="0.01" min="1" placeholder="Mínimo al que puede bajar (ej. 500)">
+            </div>
+            <div>
+              <label class="eb-form-label">Decremento por hora ($)</label>
+              <input type="number" name="decremento_hora" class="eb-input" step="0.01" min="0" placeholder="Cuánto baja cada hora (ej. 100)">
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--eb-text2);margin-top:8px;">El "Precio base" se usa como precio de <strong>arranque alto</strong>. El descenso se detiene en el precio piso.</div>
         </div>
       </div>
 
@@ -106,5 +124,16 @@ function toggle(){
 }
 sel.addEventListener('change',toggle);
 toggle();
+
+// Mostrar campos de holandesa (piso/decremento) solo cuando el tipo de subasta es Holandesa (id=2)
+const selSub=document.querySelector('select[name="tipo_subasta"]');
+const lblBase=document.getElementById('lbl-precio-base');
+function toggleHolandesa(){
+  const esHol = selSub.value=='2';
+  document.getElementById('campos-holandesa').style.display = esHol?'block':'none';
+  lblBase.textContent = esHol ? 'Precio de arranque ($)' : 'Precio base ($)';
+}
+selSub.addEventListener('change',toggleHolandesa);
+toggleHolandesa();
 </script>
 {% endblock %}

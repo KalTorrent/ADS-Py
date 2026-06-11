@@ -160,6 +160,32 @@ def cerrar_subasta_con_ganador(db, id_sub, id_ganador, monto, tipo_art):
               "Exito", id_sub)
 
 
+def verificar_decremento_holandesa(db):
+    """RN-09: recalcula precio_actual de holandesas activas según horas transcurridas.
+    precio_actual = max(precio_piso, precio_base - decremento_hora * horas)."""
+    holandesas = db.execute(
+        """SELECT id_subasta, precio_base, precio_piso, decremento_hora,
+                  precio_actual, fecha_inicio
+           FROM subasta
+           WHERE id_estado = 1 AND id_tipo = 2"""
+    ).fetchall()
+    cambios = False
+    for h in holandesas:
+        if h["decremento_hora"] is None or h["precio_piso"] is None:
+            continue
+        inicio = datetime.datetime.strptime(h["fecha_inicio"], "%Y-%m-%d %H:%M:%S")
+        horas = int((datetime.datetime.utcnow() - inicio).total_seconds() // 3600)
+        if horas < 0:
+            horas = 0
+        nuevo = max(h["precio_piso"], h["precio_base"] - h["decremento_hora"] * horas)
+        if nuevo != h["precio_actual"]:
+            db.execute("UPDATE subasta SET precio_actual=? WHERE id_subasta=?",
+                       (nuevo, h["id_subasta"]))
+            cambios = True
+    if cambios:
+        db.commit()
+
+
 def verificar_cierre_subastas(db):
     """RN-13: cierra subastas cuya fecha_fin ya pasó. Desempate: monto DESC, fecha_oferta ASC."""
     vencidas = db.execute(
@@ -196,6 +222,7 @@ def verificar_cierre_subastas(db):
 @app.route("/")
 def index():
     db = get_db()
+    verificar_decremento_holandesa(db)
     verificar_cierre_subastas(db)
     verificar_aprobacion_automatica(db)
     verificar_pagos_vencidos(db)
@@ -286,6 +313,7 @@ def logout():
 def admin_dashboard():
     """CU-A01: Panel principal del administrador"""
     db = get_db()
+    verificar_decremento_holandesa(db)
     verificar_cierre_subastas(db)
     verificar_aprobacion_automatica(db)
     pendientes = db.execute(
@@ -584,6 +612,7 @@ def catalogo():
     categoria = request.args.get("categoria", "")
     busqueda  = request.args.get("q", "")
     db = get_db()
+    verificar_decremento_holandesa(db)
     verificar_cierre_subastas(db)
     query = """
         SELECT s.id_subasta, a.titulo, a.ubicacion, s.precio_actual,
@@ -615,6 +644,7 @@ def catalogo():
 def detalle_subasta(id_sub):
     """CU-C03/C04: Detalle de artículo (RN-10: solo puja actual)"""
     db = get_db()
+    verificar_decremento_holandesa(db)
     verificar_cierre_subastas(db)
     subasta = db.execute(
         """SELECT s.*, a.titulo, a.descripcion, a.ubicacion, a.imagen_path,
@@ -687,16 +717,64 @@ def realizar_oferta(id_sub):
         flash("Monto inválido.", "danger")
         db.close()
         return redirect(url_for("detalle_subasta", id_sub=id_sub))
-    # RN-08: incremento mínimo
+    # ── Rama por tipo de subasta ────────────────────────────────────────────
+    if sub["id_tipo"] == 2:
+        # RN-09 HOLANDESA: aceptar el precio vigente y cerrar de inmediato.
+        # El precio se recalcula en el servidor (no se confía en el campo oculto del cliente).
+        inicio = datetime.datetime.strptime(sub["fecha_inicio"], "%Y-%m-%d %H:%M:%S")
+        horas = max(0, int((datetime.datetime.utcnow() - inicio).total_seconds() // 3600))
+        piso = sub["precio_piso"] if sub["precio_piso"] is not None else sub["precio_base"]
+        decr = sub["decremento_hora"] if sub["decremento_hora"] is not None else 0
+        precio_vigente = max(piso, sub["precio_base"] - decr * horas)
+        tipo_art = db.execute("SELECT id_tipo FROM articulo WHERE id_articulo=?",
+                              (sub["id_articulo"],)).fetchone()["id_tipo"]
+        db.execute(
+            "INSERT INTO oferta (id_subasta,id_comprador,monto,es_sellada) VALUES(?,?,?,0)",
+            (id_sub, session["user_id"], precio_vigente)
+        )
+        db.execute("UPDATE subasta SET precio_actual=? WHERE id_subasta=?",
+                   (precio_vigente, id_sub))
+        cerrar_subasta_con_ganador(db, id_sub, session["user_id"], precio_vigente, tipo_art)
+        db.commit()
+        db.close()
+        flash(f"MSG-06: ¡Aceptaste ${precio_vigente:,.2f} y ganaste la subasta!", "success")
+        return redirect(url_for("detalle_subasta", id_sub=id_sub))
+
+    if sub["id_tipo"] == 3:
+        # RN-10 SELLADA: oferta privada, una por usuario, sin actualizar precio ni ganador.
+        ya = db.execute(
+            "SELECT id_oferta FROM oferta WHERE id_subasta=? AND id_comprador=?",
+            (id_sub, session["user_id"])
+        ).fetchone()
+        if ya:
+            flash("ERR-11: Ya enviaste tu oferta sellada. Solo se permite una por usuario.", "danger")
+            db.close()
+            return redirect(url_for("detalle_subasta", id_sub=id_sub))
+        if monto < sub["precio_base"]:
+            flash(f"ERR-02: La oferta debe ser al menos ${sub['precio_base']:,.2f}.", "danger")
+            db.close()
+            return redirect(url_for("detalle_subasta", id_sub=id_sub))
+        db.execute(
+            "INSERT INTO oferta (id_subasta,id_comprador,monto,es_sellada) VALUES(?,?,?,1)",
+            (id_sub, session["user_id"], monto)
+        )
+        notificar(db, session["user_id"],
+                  f"MSG-03: Tu oferta sellada de ${monto:,.2f} fue registrada. Se revelará al cierre.",
+                  "Exito", id_sub)
+        db.commit()
+        db.close()
+        flash("MSG-03: Tu oferta privada fue registrada.", "success")
+        return redirect(url_for("detalle_subasta", id_sub=id_sub))
+
+    # RN-08 INGLESA (id_tipo=1): incremento mínimo y puja ascendente.
     minimo_requerido = sub["precio_actual"] + sub["incremento_min"]
     if monto < minimo_requerido:
         flash(f"ERR-02: La oferta debe ser al menos ${minimo_requerido:,.2f}.", "danger")
         db.close()
         return redirect(url_for("detalle_subasta", id_sub=id_sub))
-    es_sellada = 1 if sub["id_tipo"] == 3 else 0
     db.execute(
-        "INSERT INTO oferta (id_subasta,id_comprador,monto,es_sellada) VALUES(?,?,?,?)",
-        (id_sub, session["user_id"], monto, es_sellada)
+        "INSERT INTO oferta (id_subasta,id_comprador,monto,es_sellada) VALUES(?,?,?,0)",
+        (id_sub, session["user_id"], monto)
     )
     db.execute("UPDATE subasta SET precio_actual=?, id_ganador=? WHERE id_subasta=?",
                (monto, session["user_id"], id_sub))
@@ -939,11 +1017,20 @@ def publicar_articulo():
         fecha_inicio = now_str()
         fecha_fin = (datetime.datetime.utcnow() +
                      datetime.timedelta(days=dias)).strftime("%Y-%m-%d %H:%M:%S")
-        db.execute(
-            """INSERT INTO subasta (id_articulo,id_tipo,precio_base,precio_actual,incremento_min,fecha_inicio,fecha_fin,id_estado)
-               VALUES(?,?,?,?,?,?,?,1)""",
-            (id_art, tipo_sub, precio_base, precio_base, incr, fecha_inicio, fecha_fin)
-        )
+        if tipo_sub == 2:  # Holandesa: guardar piso y decremento por hora (RN-09)
+            precio_piso     = float(request.form.get("precio_piso", precio_base))
+            decremento_hora = float(request.form.get("decremento_hora", 0))
+            db.execute(
+                """INSERT INTO subasta (id_articulo,id_tipo,precio_base,precio_actual,incremento_min,precio_piso,decremento_hora,fecha_inicio,fecha_fin,id_estado)
+                   VALUES(?,?,?,?,?,?,?,?,?,1)""",
+                (id_art, tipo_sub, precio_base, precio_base, incr, precio_piso, decremento_hora, fecha_inicio, fecha_fin)
+            )
+        else:
+            db.execute(
+                """INSERT INTO subasta (id_articulo,id_tipo,precio_base,precio_actual,incremento_min,fecha_inicio,fecha_fin,id_estado)
+                   VALUES(?,?,?,?,?,?,?,1)""",
+                (id_art, tipo_sub, precio_base, precio_base, incr, fecha_inicio, fecha_fin)
+            )
         db.commit()
         db.close()
         flash("Artículo enviado a validación. El administrador lo revisará en breve.", "success")

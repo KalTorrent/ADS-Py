@@ -142,9 +142,11 @@ def init_db():
         id_subasta      INTEGER PRIMARY KEY AUTOINCREMENT,
         id_articulo     INTEGER NOT NULL REFERENCES articulo(id_articulo),
         id_tipo         INTEGER NOT NULL REFERENCES cat_tipo_subasta(id),
-        precio_base     REAL    NOT NULL,
+        precio_base     REAL    NOT NULL,   -- Holandesa: precio de ARRANQUE alto (inmutable)
         precio_actual   REAL    NOT NULL,
         incremento_min  REAL    NOT NULL DEFAULT 1,
+        precio_piso     REAL,               -- Holandesa: piso del descenso (RN-09)
+        decremento_hora REAL,               -- Holandesa: decremento por hora (RN-09)
         fecha_inicio    TEXT    NOT NULL,
         fecha_fin       TEXT    NOT NULL,
         id_estado       INTEGER NOT NULL DEFAULT 1 REFERENCES cat_estado_subasta(id),
@@ -224,7 +226,7 @@ def seed_demo():
     usuarios = [
         ("Admin Sistema", "admin@subasta.mx", generate_password_hash("Admin1234"), 1, 1, 0, 0, 1),
         ("Ana Compradora", "ana@mail.mx",     generate_password_hash("Ana12345"),  2, 1, 4.5, 2, 1),
-        ("Carlos Compra",  "carlos@mail.mx",  generate_password_hash("Carlos123"), 2, 1, 0, 0, 1),
+        ("Carlos Compra",  "carlos@mail.mx",  generate_password_hash("Carlos1234"), 2, 1, 0, 0, 1),
         ("Vendedor Demo",  "vend@mail.mx",    generate_password_hash("Vend1234"),  3, 1, 4.2, 5, 1),
     ]
     c.executemany(
@@ -264,6 +266,31 @@ def seed_demo():
     c.execute(
         "INSERT INTO notificacion (id_usuario,mensaje,tipo,id_ref) VALUES(?,?,?,?)",
         (2, "¡Su oferta de $8,500 ha sido registrada!", "Exito", id_sub)
+    )
+
+    # ── Subasta HOLANDESA activa (RN-09): arranque 1000, piso 500, decremento 100/h ──
+    # fecha_inicio backdateada 3 h → precio_actual ya muestra 1000 - 100*3 = 700
+    c.execute(
+        "INSERT INTO articulo (titulo,descripcion,id_tipo,id_condicion,ubicacion,id_vendedor,id_estado) VALUES(?,?,?,?,?,?,?)",
+        ("Reloj de colección vintage", "Subasta holandesa: el precio baja $100 cada hora hasta un piso de $500", 1, 2, "CDMX", 4, 4)
+    )
+    id_art3 = c.lastrowid
+    c.execute(
+        """INSERT INTO subasta (id_articulo,id_tipo,precio_base,precio_actual,incremento_min,precio_piso,decremento_hora,fecha_inicio,fecha_fin,id_estado)
+           VALUES(?,?,?,?,?,?,?,datetime('now','-3 hours'),datetime('now','+1 day'),1)""",
+        (id_art3, 2, 1000, 700, 1, 500, 100)
+    )
+
+    # ── Subasta SELLADA activa (RN-10): precio_base 800, cierra en 2 días ──
+    c.execute(
+        "INSERT INTO articulo (titulo,descripcion,id_tipo,id_condicion,ubicacion,id_vendedor,id_estado) VALUES(?,?,?,?,?,?,?)",
+        ("Cuadro original firmado", "Subasta sellada: ofertas privadas, el ganador se revela al cierre", 1, 1, "Monterrey", 4, 4)
+    )
+    id_art4 = c.lastrowid
+    c.execute(
+        """INSERT INTO subasta (id_articulo,id_tipo,precio_base,precio_actual,incremento_min,fecha_inicio,fecha_fin,id_estado)
+           VALUES(?,?,?,?,?,datetime('now','-1 hour'),datetime('now','+2 days'),1)""",
+        (id_art4, 3, 800, 800, 1)
     )
 
     # Validacion pendiente para vehiculo

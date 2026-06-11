@@ -61,3 +61,75 @@ Ninguno. `id_estado`, `id_ganador`, `fecha_fin` y la tabla `pago` ya existen.
 3. Wire-in en las 4 rutas
 4. Endurecer `realizar_oferta`
 5. Ajustar `realizar_pago`
+
+---
+
+# Decisiones de implementación — Arreglo 2: Subasta Holandesa y Sellada
+
+## Reglas de negocio aplicadas
+
+### RN-09 — Subasta Holandesa (precio descendente)
+**Fuente:** aud1.txt, restricciones.txt
+**Regla:** El precio arranca alto y **decrece cada hora** hasta un piso. El primer comprador
+que acepte el precio vigente **gana y la subasta cierra de inmediato**. No hay incremento
+mínimo ni pujas ascendentes.
+**Semántica de columnas (decisión de equipo):**
+- `precio_base` = precio de **arranque alto** (inmutable; ej. 1000).
+- `precio_piso` = **piso/mínimo** al que puede llegar el descenso (ej. 500). [NUEVA columna]
+- `decremento_hora` = cuánto baja por cada hora transcurrida (ej. 100). [NUEVA columna]
+- `precio_actual` = valor **derivado**, recalculado en cada barrido:
+  `precio_actual = max(precio_piso, precio_base - decremento_hora * horas_transcurridas)`.
+**Impacto:**
+- Nueva `verificar_decremento_holandesa(db)`, invocada junto a las demás `verificar_*`.
+- Rama Holandesa en `realizar_oferta()`: omite RN-08, **recalcula el precio vigente en el
+  servidor** (no confía en el campo oculto del cliente), registra la oferta y cierra de
+  inmediato con `cerrar_subasta_con_ganador` (Arreglo 1) + MSG-06.
+
+### RN-10 — Subasta Sellada (ofertas privadas)
+**Fuente:** aud1.txt, restricciones.txt
+**Regla:** Cada oferta es **privada**; el ganador se revela **solo al cierre** por tiempo.
+Ningún postor ve el monto ni la existencia de otras ofertas.
+**Decisiones de equipo:**
+- **Una sola oferta por usuario** por subasta sellada (se rechaza la segunda con ERR-11).
+- Validación mínima: `monto >= precio_base` (no hay incremento sobre ofertas ajenas).
+- **NO** se actualiza `precio_actual` (no se filtra el estado de la puja).
+- **NO** se actualiza `id_ganador` durante la subasta (se determina al cierre, Arreglo 1).
+- Solo MSG-03 (confirmación al ofertante). **Nunca MSG-04** (delataría que hay competencia).
+**Impacto:** la revelación del ganador la realiza `verificar_cierre_subastas` (Arreglo 1),
+que toma el `MAX(monto)`.
+
+### RN-08 — Incremento mínimo (ahora restringido a Inglesa)
+**Regla:** El chequeo `monto >= precio_actual + incremento_min` queda **exclusivo de la
+Inglesa (id_tipo=1)**. Holandesa y Sellada tienen su propia rama en `realizar_oferta()`.
+
+## Criterios de aceptación (Arreglo 2)
+
+| # | Criterio |
+|---|---|
+| AC-07 | Holandesa: `precio_actual` baja `decremento_hora` por cada hora y **nunca** baja de `precio_piso`. |
+| AC-08 | Holandesa: aceptar el precio vigente cierra la subasta de inmediato (`id_estado=2`), fija ganador, crea pago y MSG-06. |
+| AC-09 | Holandesa: tras la aceptación, una segunda puja se rechaza (subasta ya no activa). |
+| AC-10 | Sellada: dos compradores ofertan; `precio_actual` **no cambia** y `id_ganador` queda NULL hasta el cierre. |
+| AC-11 | Sellada: un segundo intento del mismo usuario se rechaza (ERR-11). |
+| AC-12 | Sellada: no se genera MSG-04 a ningún postor. |
+| AC-13 | Sellada: al vencer por tiempo gana el `MAX(monto)` y se revela (vía Arreglo 1). |
+| AC-14 | Inglesa: sigue funcionando con incremento mínimo (no-regresión). |
+
+## Cambios de esquema
+- `subasta.precio_piso REAL` — piso del descenso holandés (NULL para otros tipos).
+- `subasta.decremento_hora REAL` — decremento por hora (NULL para otros tipos).
+- **Migración:** borrar `subasta.db` y regenerar con `seed_demo()` (decisión de equipo).
+
+## Datos demo sembrados (seed_demo)
+- INGLESA activa: Laptop Gaming MSI (precio_actual 8500).
+- HOLANDESA activa: arranque 1000, piso 500, decremento 100, iniciada hace 3 h → muestra 700.
+- SELLADA activa: precio_base 800, cierra en 2 días.
+- Segundo comprador: carlos@mail.mx / Carlos1234 (para probar sellada con dos usuarios).
+
+## Orden de implementación (Arreglo 2)
+1. Esquema (`precio_piso`, `decremento_hora`) en `database.py` + ajuste del INSERT de `publicar_articulo`.
+2. `verificar_decremento_holandesa` + wire-in.
+3. Rama Holandesa en `realizar_oferta`.
+4. Rama Sellada en `realizar_oferta`.
+5. Plantillas (`publicar.html`, `detalle_subasta.html`).
+6. Seed: una holandesa (1000/500/100) y una sellada.

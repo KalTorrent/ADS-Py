@@ -94,10 +94,14 @@
 
     <!-- Bid price box -->
     <div class="bid-box" style="margin-bottom:12px;">
-      <div class="bid-label">Precio actual</div>
+      <div class="bid-label">{% if sub.tipo_sub == 'Sellada' %}Precio inicial{% else %}Precio actual{% endif %}</div>
       <div class="bid-price">${{ "%.2f"|format(sub.precio_actual) }}</div>
       <div style="font-size:12px;color:var(--eb-text2);margin-top:4px;">
+        {% if sub.tipo_sub == 'Sellada' %}
+        Ofertas privadas · se revelan al cierre (RN-10)
+        {% else %}
         {{ sub.total_ofertas }} oferta(s) · Incremento mínimo: ${{ "%.2f"|format(sub.incremento_min) }}
+        {% endif %}
       </div>
       <div style="margin:10px 0;padding:8px;background:#fff9e6;border-radius:4px;font-size:12px;">
         <strong style="color:var(--eb-red);">⏳ </strong>
@@ -111,11 +115,11 @@
         <input type="hidden" name="monto" value="{{ sub.precio_actual }}">
         <button type="submit" class="btn-eb-bid">Aceptar ${{ "%.2f"|format(sub.precio_actual) }}</button>
         {% elif sub.tipo_sub == 'Sellada' %}
-        <p style="font-size:12px;color:var(--eb-text2);margin-bottom:8px;">Tu oferta es privada (RN-10). Se revelará al cierre de la subasta.</p>
+        <p style="font-size:12px;color:var(--eb-text2);margin-bottom:8px;">Tu oferta es privada (RN-10). Se revelará al cierre de la subasta. Solo puedes enviar una.</p>
         <input type="number" name="monto" step="0.01"
-               min="{{ sub.precio_actual + sub.incremento_min }}"
+               min="{{ sub.precio_base }}"
                class="eb-input" style="margin-bottom:8px;"
-               placeholder="Mínimo: ${{ '%.2f'|format(sub.precio_actual + sub.incremento_min) }}" required>
+               placeholder="Mínimo: ${{ '%.2f'|format(sub.precio_base) }}" required>
         <button type="submit" class="btn-eb-bid">Enviar oferta privada</button>
         {% else %}
         <input type="number" name="monto" step="0.01"
