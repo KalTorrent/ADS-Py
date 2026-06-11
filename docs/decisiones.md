@@ -201,3 +201,40 @@ Nueva ruta `/admin/reportes` que resume la actividad de un mes:
 2. Template `admin_reportes.html` (Bootstrap).
 3. Enlace en el navbar admin (`base.html`).
 4. Filtro mes/año (form GET).
+
+---
+
+# Decisiones de implementación — Arreglo 5: Imágenes obligatorias al confirmar recepción (CU-C07/C08)
+
+## Funcionalidad
+**Fuente:** CU-C07, restricciones.txt
+Al confirmar recepción, el comprador debe **adjuntar evidencia fotográfica** (≥1 imagen).
+`confirmar_recepcion()` pasa de solo-POST a GET (muestra formulario) + POST (procesa).
+
+## Reglas
+- Mínimo **1 imagen** obligatoria; sin imagen → rechazo (AC-21).
+- Extensiones permitidas: `.jpg`, `.jpeg`, `.png` (AC-23). Otras → rechazo.
+- Tamaño máximo **5 MB por imagen** (validado con seek/tell en el handler).
+- `MAX_CONTENT_LENGTH` global sube a 30 MB para permitir varias imágenes por request.
+- Archivos en `static/uploads/recepciones/`, nombre `recepcion_{id_pago}_{n}.ext`,
+  servibles por `/static/...` (AC-24).
+- Las rutas se registran en la nueva tabla `imagen_recepcion`.
+- Se mantiene: marcar subasta Finalizada, registrar calificación, actualizar reputación, MSG-14.
+
+## Cambios de esquema
+- Nueva tabla `imagen_recepcion (id_imagen, id_pago, ruta, fecha)`.
+
+## Criterios de aceptación (Arreglo 5)
+| # | Criterio |
+|---|---|
+| AC-21 | Confirmar SIN imagen → rechazado con error. |
+| AC-22 | Confirmar CON imagen(es) → guardadas en disco + en `imagen_recepcion` + calificación registrada. |
+| AC-23 | Extensión no permitida → rechazada. |
+| AC-24 | Imágenes accesibles desde el historial. |
+
+## Orden (Arreglo 5)
+1. Tabla `imagen_recepcion` en `database.py`.
+2. Carpeta `static/uploads/recepciones/`.
+3. `confirmar_recepcion()` GET+POST con validación y guardado.
+4. `mi_historial()` pasa las imágenes al template; enlace a la página de confirmación.
+5. Templates `confirmar_recepcion.html` (nuevo) y `mi_historial.html` (enlace + miniaturas).

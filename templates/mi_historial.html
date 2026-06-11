@@ -46,14 +46,18 @@
       {% if not g.id_estado_pago or g.id_estado_pago == 1 %}
       <a href="{{ url_for('realizar_pago', id_sub=g.id_subasta) }}" class="btn-eb-primary btn-eb-sm" style="text-decoration:none;">Pagar</a>
       {% elif g.id_estado_pago == 3 and not g.ya_califiqu %}
-      <form method="POST" action="{{ url_for('confirmar_recepcion', id_sub=g.id_subasta) }}" style="display:flex;gap:6px;align-items:center;">
-        <select name="puntuacion" class="eb-select" style="width:60px;padding:4px 6px;">
-          <option>5</option><option>4</option><option>3</option><option>2</option><option>1</option>
-        </select>
-        <button type="submit" class="btn-eb-primary btn-eb-sm">Confirmar recepción</button>
-      </form>
+      <a href="{{ url_for('confirmar_recepcion', id_sub=g.id_subasta) }}" class="btn-eb-primary btn-eb-sm" style="text-decoration:none;">Confirmar recepción</a>
       {% elif g.ya_califiqu %}
       <span style="color:var(--eb-green);font-size:12px;font-weight:600;">✔ Completado</span>
+      {% if imagenes_recepcion.get(g.id_subasta) %}
+      <div style="display:flex;gap:4px;margin-top:4px;">
+        {% for ruta in imagenes_recepcion[g.id_subasta] %}
+        <a href="{{ url_for('static', filename=ruta) }}" target="_blank">
+          <img src="{{ url_for('static', filename=ruta) }}" style="width:36px;height:36px;object-fit:cover;border:1px solid var(--eb-border);border-radius:3px;">
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% endif %}
     </td>
   </tr>

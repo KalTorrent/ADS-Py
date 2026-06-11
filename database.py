@@ -215,6 +215,14 @@ def init_db():
         motivo      TEXT,
         fecha       TEXT    NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- AC-IMG: Imagenes de evidencia al confirmar recepcion (CU-C07)
+    CREATE TABLE IF NOT EXISTS imagen_recepcion (
+        id_imagen   INTEGER PRIMARY KEY AUTOINCREMENT,
+        id_pago     INTEGER NOT NULL REFERENCES pago(id_pago),
+        ruta        TEXT    NOT NULL,
+        fecha       TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
     """)
 
     conn.commit()

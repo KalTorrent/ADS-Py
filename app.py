@@ -17,7 +17,7 @@ app.secret_key = "SUB4ST4_S3CR3T_K3Y_2024"
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), "uploads")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "pdf"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # ERR-04: max 5MB
+app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024  # 30MB: permite varias imagenes/request (5MB c/u validado en handler)
 
 
 def allowed_file(filename):
@@ -951,42 +951,90 @@ def realizar_pago(id_sub):
 
 
 # ── Comprador: Confirmar recepción y calificar ─────────────────────────────────
-@app.route("/confirmar_recepcion/<int:id_sub>", methods=["POST"])
+IMG_EXT = {"png", "jpg", "jpeg"}
+
+
+@app.route("/confirmar_recepcion/<int:id_sub>", methods=["GET", "POST"])
 @login_required
 def confirmar_recepcion(id_sub):
-    """CU-C07: Confirmar recepción y calificar vendedor"""
-    puntuacion = int(request.form.get("puntuacion", 0))
-    comentario = request.form.get("comentario_cal", "")
-    if puntuacion < 1 or puntuacion > 5:
-        flash("La calificación debe ser entre 1 y 5.", "danger")
-        return redirect(url_for("mi_historial"))
+    """CU-C07: Confirmar recepción con evidencia fotográfica y calificar vendedor."""
     db = get_db()
-    sub = db.execute(
-        "SELECT s.id_subasta, a.id_vendedor FROM subasta s JOIN articulo a ON a.id_articulo=s.id_articulo WHERE s.id_subasta=?",
-        (id_sub,)
+    info = db.execute(
+        """SELECT s.id_subasta, a.titulo, a.id_vendedor, u.nombre AS vendedor,
+                  p.id_pago, p.monto
+           FROM subasta s
+           JOIN articulo a ON a.id_articulo = s.id_articulo
+           JOIN usuario u ON u.id_usuario = a.id_vendedor
+           LEFT JOIN pago p ON p.id_subasta = s.id_subasta AND p.id_comprador = ?
+           WHERE s.id_subasta = ? AND s.id_ganador = ?""",
+        (session["user_id"], id_sub, session["user_id"])
     ).fetchone()
-    if not sub:
-        flash("Subasta no encontrada.", "danger")
+    if not info or info["id_pago"] is None:
+        flash("No tienes una recepción pendiente para esa subasta.", "warning")
         db.close()
         return redirect(url_for("mi_historial"))
-    db.execute("UPDATE subasta SET id_estado=2 WHERE id_subasta=?", (id_sub,))
-    db.execute(
-        "INSERT INTO calificacion (id_subasta,id_calificador,id_calificado,puntuacion,comentario) VALUES(?,?,?,?,?)",
-        (id_sub, session["user_id"], sub["id_vendedor"], puntuacion, comentario)
-    )
-    # Actualizar reputación del vendedor
-    stats = db.execute(
-        "SELECT AVG(puntuacion) as avg, COUNT(*) as cnt FROM calificacion WHERE id_calificado=?",
-        (sub["id_vendedor"],)
-    ).fetchone()
-    db.execute("UPDATE usuario SET reputacion=?, total_cal=? WHERE id_usuario=?",
-               (round(stats["avg"], 2), stats["cnt"], sub["id_vendedor"]))
-    notificar(db, session["user_id"],
-              "MSG-14: Entrega confirmada exitosamente.", "Exito", id_sub)
-    db.commit()
+
+    if request.method == "POST":
+        try:
+            puntuacion = int(request.form.get("puntuacion", 0))
+        except ValueError:
+            puntuacion = 0
+        comentario = request.form.get("comentario_cal", "")
+        if puntuacion < 1 or puntuacion > 5:
+            flash("La calificación debe ser entre 1 y 5.", "danger")
+            db.close()
+            return redirect(url_for("confirmar_recepcion", id_sub=id_sub))
+
+        imagenes = [f for f in request.files.getlist("imagenes") if f and f.filename]
+        # AC-21: al menos una imagen
+        if not imagenes:
+            flash("ERR-13: Debes adjuntar al menos una imagen como evidencia de recepción.", "danger")
+            db.close()
+            return redirect(url_for("confirmar_recepcion", id_sub=id_sub))
+        # AC-23 + tamaño: validar TODO antes de guardar nada
+        for f in imagenes:
+            ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+            if ext not in IMG_EXT:
+                flash(f"ERR-04: '{f.filename}' tiene una extensión no permitida (solo JPG/PNG).", "danger")
+                db.close()
+                return redirect(url_for("confirmar_recepcion", id_sub=id_sub))
+            f.seek(0, os.SEEK_END); size = f.tell(); f.seek(0)
+            if size > 5 * 1024 * 1024:
+                flash(f"ERR-04: '{f.filename}' supera el máximo de 5 MB.", "danger")
+                db.close()
+                return redirect(url_for("confirmar_recepcion", id_sub=id_sub))
+
+        # Guardar imágenes y registrar rutas
+        carpeta = os.path.join(app.root_path, "static", "uploads", "recepciones")
+        os.makedirs(carpeta, exist_ok=True)
+        for n, f in enumerate(imagenes, 1):
+            ext = f.filename.rsplit(".", 1)[-1].lower()
+            fname = secure_filename(f"recepcion_{info['id_pago']}_{n}.{ext}")
+            f.save(os.path.join(carpeta, fname))
+            ruta = f"uploads/recepciones/{fname}"  # relativa a /static
+            db.execute("INSERT INTO imagen_recepcion (id_pago, ruta) VALUES (?, ?)",
+                       (info["id_pago"], ruta))
+
+        # Confirmar recepción + calificación
+        db.execute("UPDATE subasta SET id_estado=2 WHERE id_subasta=?", (id_sub,))
+        db.execute(
+            "INSERT INTO calificacion (id_subasta,id_calificador,id_calificado,puntuacion,comentario) VALUES(?,?,?,?,?)",
+            (id_sub, session["user_id"], info["id_vendedor"], puntuacion, comentario)
+        )
+        stats = db.execute(
+            "SELECT AVG(puntuacion) AS avg, COUNT(*) AS cnt FROM calificacion WHERE id_calificado=?",
+            (info["id_vendedor"],)
+        ).fetchone()
+        db.execute("UPDATE usuario SET reputacion=?, total_cal=? WHERE id_usuario=?",
+                   (round(stats["avg"], 2), stats["cnt"], info["id_vendedor"]))
+        notificar(db, session["user_id"], "MSG-14: Entrega confirmada exitosamente.", "Exito", id_sub)
+        db.commit()
+        db.close()
+        flash("MSG-14: Entrega confirmada con evidencia y vendedor calificado.", "success")
+        return redirect(url_for("mi_historial"))
+
     db.close()
-    flash("MSG-14: Entrega confirmada y vendedor calificado.", "success")
-    return redirect(url_for("mi_historial"))
+    return render_template("confirmar_recepcion.html", info=info)
 
 
 # ── Comprador: Historial ───────────────────────────────────────────────────────
@@ -1030,9 +1078,21 @@ def mi_historial():
            ORDER BY s.fecha_fin DESC""",
         (session["user_id"], session["user_id"], session["user_id"])
     ).fetchall()
+    # AC-24: imágenes de recepción accesibles desde el historial
+    imgs = db.execute(
+        """SELECT ir.ruta, p.id_subasta
+           FROM imagen_recepcion ir
+           JOIN pago p ON p.id_pago = ir.id_pago
+           WHERE p.id_comprador = ?""",
+        (session["user_id"],)
+    ).fetchall()
+    imagenes_recepcion = {}
+    for r in imgs:
+        imagenes_recepcion.setdefault(r["id_subasta"], []).append(r["ruta"])
     db.close()
     return render_template("mi_historial.html",
-                           ofertas=ofertas, pagos=pagos, ganadas=ganadas)
+                           ofertas=ofertas, pagos=pagos, ganadas=ganadas,
+                           imagenes_recepcion=imagenes_recepcion)
 
 
 # ── Notificaciones ─────────────────────────────────────────────────────────────
